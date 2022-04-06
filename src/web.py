@@ -6,6 +6,23 @@ import fastapi
 import pydantic
 
 
+PostID = int
+
+
+class PostCatalog(Protocol):
+    """Catalog of users posts."""
+
+    def make_post(self, req: PostRequest) -> PostID:
+        """Make a new post.
+
+        Args:
+            req: new post request
+        Returns:
+            New post ID.
+        """
+        ...
+
+
 def create_app() -> fastapi.FastAPI:
     app = fastapi.FastAPI()
     app.include_router(router)
@@ -13,14 +30,6 @@ def create_app() -> fastapi.FastAPI:
 
 
 router = fastapi.APIRouter()
-
-
-class PostCatalog(Protocol):
-    """Catalog of users posts."""
-
-    def make_post(self, req: PostRequest):
-        """Make a new post."""
-        ...
 
 
 def catalog() -> PostCatalog:
@@ -36,5 +45,5 @@ class PostRequest(pydantic.BaseModel):
 
 @router.post("/posts", status_code=201)
 def create_post(req: PostRequest, response: fastapi.Response, catalog: PostCatalog = fastapi.Depends(catalog)):
-    catalog.make_post(req)
-    response.headers["location"] = "/posts/1"
+    post_id = catalog.make_post(req)
+    response.headers["location"] = f"/posts/{post_id}"

@@ -1,11 +1,12 @@
-import dataclasses
-from typing import Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import faker
 import httpx
 
-import web
-
+if TYPE_CHECKING:
+    from tests.conftest import StubPostsCatalog
 
 fake = faker.Faker()
 
@@ -13,41 +14,22 @@ fake = faker.Faker()
 class TestPOSTPosts:
     """Test posts resource POST endpoint."""
 
-    async def test_creating_post(self):
-        catalog = _StubPostsCatalog()
-        client = _get_client(catalog)
+    async def test_creating_post(self, client: httpx.AsyncClient, catalog: StubPostsCatalog):
         post = _random_post()
 
-        resp = await client.post("/posts", json=post)
+        resp = await _make_post(client, post)
 
         _assert_code(resp, httpx.codes.CREATED)
         _assert_location(resp, "/posts/1")
         _assert_posted(catalog, post)
 
 
-@dataclasses.dataclass
-class _StubPostsCatalog:
-    """Stub implementation of posts catalog for testing."""
-
-    post_calls: list[dict] = dataclasses.field(default_factory=list)
-
-    def make_post(self, req: web.PostRequest):
-        """Make a new post."""
-        self.post_calls.append(req.dict())
-
-
-def _get_client(catalog: Optional[_StubPostsCatalog] = None) -> httpx.AsyncClient:
-    if catalog is None:
-        catalog = _StubPostsCatalog()
-
-    app = web.create_app()
-    app.dependency_overrides[web.catalog] = lambda: catalog
-
-    return httpx.AsyncClient(app=app, base_url="https://testserver")
-
-
 def _random_post() -> dict:
     return {"title": fake.pystr(), "description": fake.pystr()}
+
+
+async def _make_post(client: httpx.AsyncClient, post: dict) -> httpx.Response:
+    return await client.post("/posts", json=post)
 
 
 def _assert_code(resp: httpx.Response, want: int):
@@ -61,6 +43,6 @@ def _assert_location(resp: httpx.Response, want: str):
     assert have == want, f"Invalid location received\nhave {have}\nwant {want}"
 
 
-def _assert_posted(catalog: _StubPostsCatalog, post: dict):
+def _assert_posted(catalog: StubPostsCatalog, post: dict):
     assert len(catalog.post_calls) == 1, f"Have {len(catalog.post_calls)} calls to post, want 1"
     assert catalog.post_calls[0] == post, f"Didn't post correct message, have {catalog.post_calls[0]}, want {post}"
