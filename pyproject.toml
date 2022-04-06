@@ -22,3 +22,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
+
+[tool.pytest.ini_options]
+addopts = "-v"
+asyncio_mode = "auto"
