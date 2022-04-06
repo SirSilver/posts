@@ -1,0 +1,29 @@
+[flake8]
+ignore = 
+    ANN002,
+    ANN003,
+    ANN101,
+    ANN102,
+
+exclude =
+    .git,
+    __pycache__,
+    migrations,
+    settings,
+
+per-file-ignores =
+    __init__.py: F401
+
+max-line-length = 120
+
+# flake8-import-order
+import-order-style = pep8
+application-import-names =
+    apps,
+    config,
+    consumer,
+    strategies,
+
+# flake8-annotations
+suppress-none-returning = true
+allow-untyped-nested = true
