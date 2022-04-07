@@ -39,7 +39,7 @@ def create_app() -> fastapi.FastAPI:
     return app
 
 
-router = fastapi.APIRouter()
+router = fastapi.APIRouter(prefix="/posts", tags=["posts"])
 
 
 def catalog() -> PostCatalog:
@@ -61,13 +61,13 @@ class PostResponse(pydantic.BaseModel):
     description: str
 
 
-@router.post("/posts", status_code=201)
+@router.post("", status_code=201)
 def create_post(req: PostRequest, response: fastapi.Response, catalog: PostCatalog = fastapi.Depends(catalog)):
     post_id = catalog.make_post(req)
     response.headers["location"] = f"/posts/{post_id}"
 
 
-@router.get("/posts/{post_id}", response_model=PostResponse)
+@router.get("/{post_id}", response_model=PostResponse)
 def get_post(post_id: PostID, catalog: PostCatalog = fastapi.Depends(catalog)):
     post = catalog.get(post_id)
 
