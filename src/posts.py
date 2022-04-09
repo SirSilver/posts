@@ -39,3 +39,14 @@ class Catalog(Protocol):
             Saved post in catalog if found.
         """
         ...
+
+    def has_like(self, post_id: ID, username: str) -> bool:
+        """Check whether the user has liked the post.
+
+        Args:
+            post_id: unique ID to look for.
+            username: checking user.
+        Returns:
+            Whether the user has liked the post.
+        """
+        ...

@@ -1,10 +1,12 @@
 """Pytest fixtures."""
 
 
+import collections
 import dataclasses
+import functools
 from typing import Optional
-import fastapi
 
+import fastapi
 import faker
 import httpx
 import pytest
@@ -93,6 +95,7 @@ class StubPostsCatalog:
 
     post_calls: list[tuple[str, dict]] = dataclasses.field(default_factory=list)
     _posts: dict[posts.ID, dict] = dataclasses.field(default_factory=dict)
+    _likes: dict[posts.ID, list[str]] = dataclasses.field(default_factory=functools.partial(collections.defaultdict, list))
 
     def make_post(self, author: str, req: posts.MakePostRequest) -> posts.ID:
         """Make a new post.
@@ -125,6 +128,31 @@ class StubPostsCatalog:
             Saved post in catalog if found.
         """
         return self._posts.get(post_id)
+
+    def add_like(self, username: str, post_id: posts.ID):
+        """Add like from user.
+
+        This is helper func for tests setup.
+
+        Args:
+            username: liking user.
+            post_id: unique ID to look for.
+        """
+        self._likes[post_id].append(username)
+
+    def has_like(self, post_id: posts.ID, username: str) -> bool:
+        """Check whether the user has liked the post.
+
+        Args:
+            post_id: unique ID to look for.
+            username: checking user.
+        Returns:
+            Whether the user has liked the post.
+        """
+        try:
+            return username in self._likes[post_id]
+        except KeyError:
+            return False
 
 
 @pytest.fixture()

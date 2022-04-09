@@ -59,7 +59,14 @@ def get_post(
 
     links = []
 
-    if post["author"] != username:
+    resp = post | {"links": links}
+
+    if not username or post["author"] == username:
+        return resp
+
+    if catalog.has_like(post["id"], username):
+        links.append({"rel": "unlike", "href": f"/posts/{post_id}/likes", "action": "DELETE"})
+    else:
         links.append({"rel": "like", "href": f"/posts/{post_id}/likes", "action": "POST"})
 
-    return post | {"links": links}
+    return resp

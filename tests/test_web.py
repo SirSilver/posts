@@ -82,7 +82,7 @@ class TestGETPost:
         resp = await _get_post(client, post["id"])
 
         _assert_code(resp, httpx.codes.OK)
-        _assert_body(resp, post | {"links": [{"rel": "like", "href": f"/posts/{post['id']}/likes", "action": "POST"}]})
+        _assert_body(resp, post | {"links": []})
 
     async def test_with_non_existent_post(self, client: httpx.AsyncClient):
         resp = await _get_post(client, fake.pyint(min_value=1))
@@ -101,6 +101,20 @@ class TestGETPost:
 
         _assert_code(resp, httpx.codes.OK)
         _assert_body(resp, post | {"links": []})
+
+    async def test_with_user_already_liked_the_post(
+        self, client: httpx.AsyncClient, catalog: StubPostsCatalog, registry: StubUsersRegistry
+    ):
+        post = _random_post()
+        catalog.add_post(post)
+        username = _authorize(client, registry)
+        catalog.add_like(username, post["id"])
+
+        resp = await _get_post(client, post["id"])
+
+        _assert_code(resp, httpx.codes.OK)
+        want_links = [{"rel": "unlike", "href": f"/posts/{post['id']}/likes", "action": "DELETE"}]
+        _assert_body(resp, post | {"links": want_links})
 
 
 def _random_signup_request() -> dict:
