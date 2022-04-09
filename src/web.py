@@ -9,6 +9,18 @@ import pydantic
 PostID = int
 
 
+class UsersRegistry(Protocol):
+    """Users registry."""
+
+    def signup(self, req: SignupRequest):
+        """Signup new user.
+
+        Args:
+            req: new signup user request.
+        """
+        ...
+
+
 class PostCatalog(Protocol):
     """Catalog of users posts."""
 
@@ -35,11 +47,32 @@ class PostCatalog(Protocol):
 
 def create_app() -> fastapi.FastAPI:
     app = fastapi.FastAPI()
-    app.include_router(router)
+    app.include_router(users_router)
+    app.include_router(posts_router)
     return app
 
 
-router = fastapi.APIRouter(prefix="/posts", tags=["posts"])
+users_router = fastapi.APIRouter(prefix="/users", tags=["users"])
+
+
+def registry() -> UsersRegistry:
+    ...
+
+
+class SignupRequest(pydantic.BaseModel):
+    """Request for registering new user."""
+
+    username: str
+    password: str
+
+
+@users_router.post("", status_code=201)
+def signup(req: SignupRequest, registry: UsersRegistry = fastapi.Depends(registry)):
+    registry.signup(req)
+    return {"links": [{"rel": "login", "href": "/login", "action": "POST"}]}
+
+
+posts_router = fastapi.APIRouter(prefix="/posts", tags=["posts"])
 
 
 def catalog() -> PostCatalog:
@@ -61,13 +94,13 @@ class PostResponse(pydantic.BaseModel):
     description: str
 
 
-@router.post("", status_code=201)
+@posts_router.post("", status_code=201)
 def create_post(req: PostRequest, response: fastapi.Response, catalog: PostCatalog = fastapi.Depends(catalog)):
     post_id = catalog.make_post(req)
     response.headers["location"] = f"/posts/{post_id}"
 
 
-@router.get("/{post_id}", response_model=PostResponse)
+@posts_router.get("/{post_id}", response_model=PostResponse)
 def get_post(post_id: PostID, catalog: PostCatalog = fastapi.Depends(catalog)):
     post = catalog.get(post_id)
 

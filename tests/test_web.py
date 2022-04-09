@@ -6,10 +6,23 @@ import faker
 import httpx
 
 if TYPE_CHECKING:
-    from tests.conftest import StubPostsCatalog
+    from tests.conftest import StubPostsCatalog, StubUsersRegistry
     import web
 
 fake = faker.Faker()
+
+
+class TestPOSTSignup:
+    """Test users signup."""
+
+    async def test_registering_user(self, client: httpx.AsyncClient, registry: StubUsersRegistry):
+        request = _random_signup_request()
+
+        resp = await _signup(client, request)
+
+        _assert_code(resp, httpx.codes.CREATED)
+        _assert_body(resp, {"links": [{"rel": "login", "href": "/login", "action": "POST"}]})
+        _assert_registered(registry, request)
 
 
 class TestPOSTPosts:
@@ -44,12 +57,20 @@ class TestGETPost:
         _assert_body(resp, {"detail": "Not Found"})
 
 
+def _random_signup_request() -> dict:
+    return {"username": fake.pystr(), "password": fake.pystr()}
+
+
 def _random_post_request() -> dict:
     return {"title": fake.pystr(), "description": fake.pystr()}
 
 
 def _random_post() -> dict:
     return {"id": fake.pyint(min_value=1)} | _random_post_request()
+
+
+async def _signup(client: httpx.AsyncClient, request: dict) -> httpx.Response:
+    return await client.post("/users", json=request)
 
 
 async def _make_post(client: httpx.AsyncClient, post: dict) -> httpx.Response:
@@ -63,6 +84,12 @@ async def _get_post(client: httpx.AsyncClient, post_id: web.PostID) -> httpx.Res
 def _assert_code(resp: httpx.Response, want: int):
     have = resp.status_code
     assert have == want, f"Invalid status code received\nhave {have}\nwant {want}"
+
+
+def _assert_registered(registry: StubUsersRegistry, request: dict):
+    assert len(registry.signup_calls) == 1, f"Have {len(registry.signup_calls)} calls to signup, want 1"
+    err = f"Didn't signup correct user, have {registry.signup_calls[0]}, want {request}"
+    assert registry.signup_calls[0] == request, err
 
 
 def _assert_location(resp: httpx.Response, want: str):

@@ -12,6 +12,21 @@ import web
 
 
 @dataclasses.dataclass
+class StubUsersRegistry:
+    """Stub implementatino of users registry for testing."""
+
+    signup_calls: list[dict] = dataclasses.field(default_factory=list)
+
+    def signup(self, req: web.SignupRequest):
+        """Signup new user.
+
+        Args:
+            req: new signup user request.
+        """
+        self.signup_calls.append(req.dict())
+
+
+@dataclasses.dataclass
 class StubPostsCatalog:
     """Stub implementation of posts catalog for testing."""
 
@@ -51,15 +66,20 @@ class StubPostsCatalog:
 
 
 @pytest.fixture()
-def app(catalog: StubPostsCatalog) -> fastapi.FastAPI:
+def app(registry: StubUsersRegistry, catalog: StubPostsCatalog) -> fastapi.FastAPI:
     app_ = web.create_app()
-    app_.dependency_overrides[web.catalog] = lambda: catalog
+    app_.dependency_overrides.update({web.registry: lambda: registry, web.catalog: lambda: catalog})
     return app_
 
 
 @pytest.fixture()
 def client(app: fastapi.FastAPI) -> httpx.AsyncClient:
     return httpx.AsyncClient(app=app, base_url="https://testserver")
+
+
+@pytest.fixture()
+def registry() -> StubUsersRegistry:
+    return StubUsersRegistry()
 
 
 @pytest.fixture()
