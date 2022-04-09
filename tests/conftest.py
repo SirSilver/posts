@@ -5,10 +5,14 @@ import dataclasses
 from typing import Optional
 import fastapi
 
+import faker
 import httpx
 import pytest
 
 import web
+
+
+fake = faker.Faker()
 
 
 @dataclasses.dataclass
@@ -16,6 +20,7 @@ class StubUsersRegistry:
     """Stub implementatino of users registry for testing."""
 
     signup_calls: list[dict] = dataclasses.field(default_factory=list)
+    _users: dict[tuple, str] = dataclasses.field(default_factory=dict)
 
     def signup(self, req: web.SignupRequest):
         """Signup new user.
@@ -24,6 +29,31 @@ class StubUsersRegistry:
             req: new signup user request.
         """
         self.signup_calls.append(req.dict())
+
+    def add_user(self, user: dict) -> str:
+        """Add user to registry.
+
+        This is helper func for tests setup.
+
+        Args:
+            user: will be added to registry.
+        Returns:
+            Assigned to user auth token.
+        """
+        token = fake.pystr()
+        self._users[(user["username"], user["password"])] = token
+        return token
+
+    def login(self, username: str, password: str) -> str:
+        """Login registered user.
+
+        Args:
+            username: user login identificator.
+            password: user password to match with the one in registry.
+        Returns:
+            Access auth token.
+        """
+        return self._users[(username, password)]
 
 
 @dataclasses.dataclass

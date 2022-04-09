@@ -25,6 +25,20 @@ class TestPOSTSignup:
         _assert_registered(registry, request)
 
 
+class TestPOSTLogin:
+    """Tests user login."""
+
+    async def test_login_user(self, client: httpx.AsyncClient, registry: StubUsersRegistry):
+        user = _random_user()
+        token = registry.add_user(user)
+        request = _new_login_request(user)
+
+        resp = await _login(client, request)
+
+        _assert_code(resp, httpx.codes.OK)
+        _assert_body(resp, {"token": token})
+
+
 class TestPOSTPosts:
     """Test posts resource POST endpoint."""
 
@@ -61,8 +75,16 @@ def _random_signup_request() -> dict:
     return {"username": fake.pystr(), "password": fake.pystr()}
 
 
+def _new_login_request(user: dict) -> dict:
+    return {"username": user["username"], "password": user["password"]}
+
+
 def _random_post_request() -> dict:
     return {"title": fake.pystr(), "description": fake.pystr()}
+
+
+def _random_user() -> dict:
+    return {"username": fake.pystr(), "password": fake.pystr()}
 
 
 def _random_post() -> dict:
@@ -71,6 +93,10 @@ def _random_post() -> dict:
 
 async def _signup(client: httpx.AsyncClient, request: dict) -> httpx.Response:
     return await client.post("/users", json=request)
+
+
+async def _login(client: httpx.AsyncClient, request: dict) -> httpx.Response:
+    return await client.post("/users/login", json=request)
 
 
 async def _make_post(client: httpx.AsyncClient, post: dict) -> httpx.Response:

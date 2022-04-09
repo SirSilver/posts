@@ -20,6 +20,17 @@ class UsersRegistry(Protocol):
         """
         ...
 
+    def login(self, username: str, password: str) -> str:
+        """Login registered user.
+
+        Args:
+            username: user login identificator.
+            password: user password to match with the one in registry.
+        Returns:
+            Access auth token.
+        """
+        ...
+
 
 class PostCatalog(Protocol):
     """Catalog of users posts."""
@@ -70,6 +81,11 @@ class SignupRequest(pydantic.BaseModel):
 def signup(req: SignupRequest, registry: UsersRegistry = fastapi.Depends(registry)):
     registry.signup(req)
     return {"links": [{"rel": "login", "href": "/login", "action": "POST"}]}
+
+
+@users_router.post("/login")
+def login(req: SignupRequest, registry: UsersRegistry = fastapi.Depends(registry)):
+    return {"token": registry.login(req.username, req.password)}
 
 
 posts_router = fastapi.APIRouter(prefix="/posts", tags=["posts"])
