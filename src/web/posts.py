@@ -7,12 +7,14 @@ import fastapi
 import pydantic
 
 import posts
+from web import users
 
 
 class PostResponse(pydantic.BaseModel):
     """Response model for retrieving post details."""
 
     id: int
+    author: str
     title: str
     description: str
 
@@ -26,9 +28,12 @@ def catalog() -> posts.Catalog:
 
 @router.post("", status_code=201)
 def create_post(
-    req: posts.MakePostRequest, response: fastapi.Response, catalog: posts.Catalog = fastapi.Depends(catalog)
+    req: posts.MakePostRequest,
+    response: fastapi.Response,
+    catalog: posts.Catalog = fastapi.Depends(catalog),
+    username: str = fastapi.Depends(users.current_user),
 ):
-    post_id = catalog.make_post(req)
+    post_id = catalog.make_post(username, req)
     response.headers["location"] = f"/posts/{post_id}"
 
 

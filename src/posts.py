@@ -19,10 +19,11 @@ class MakePostRequest(pydantic.BaseModel):
 class Catalog(Protocol):
     """Catalog of users posts."""
 
-    def make_post(self, req: MakePostRequest) -> ID:
+    def make_post(self, author: str, req: MakePostRequest) -> ID:
         """Make a new post.
 
         Args:
+            author: user making new post.
             req: new post request.
         Returns:
             New post ID.

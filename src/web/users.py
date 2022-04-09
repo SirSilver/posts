@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import fastapi
+from fastapi import security
 import pydantic
 
 import users
@@ -29,3 +30,16 @@ def signup(req: SignupRequest, registry: users.Registry = fastapi.Depends(regist
 @router.post("/login")
 def login(req: SignupRequest, registry: users.Registry = fastapi.Depends(registry)):
     return {"token": registry.login(req.username, req.password)}
+
+
+oauth2_scheme = security.OAuth2PasswordBearer(tokenUrl="/users/login")
+
+
+def current_user(
+    token: str = fastapi.Depends(oauth2_scheme), registry: users.Registry = fastapi.Depends(registry)
+) -> str:
+    """Dependency for retrieving username from a request."""
+    if (username := registry.authenticate(token)) is None:
+        raise fastapi.HTTPException(fastapi.status.HTTP_403_FORBIDDEN)
+
+    return username

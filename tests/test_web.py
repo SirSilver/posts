@@ -42,14 +42,34 @@ class TestPOSTLogin:
 class TestPOSTPosts:
     """Test posts resource POST endpoint."""
 
-    async def test_creating_post(self, client: httpx.AsyncClient, catalog: StubPostsCatalog):
+    async def test_creating_post(
+        self, client: httpx.AsyncClient, catalog: StubPostsCatalog, registry: StubUsersRegistry
+    ):
         request = _random_post_request()
+        username = _authorize(client, registry)
 
         resp = await _make_post(client, request)
 
         _assert_code(resp, httpx.codes.CREATED)
         _assert_location(resp, "/posts/1")
-        _assert_posted(catalog, request)
+        _assert_posted(catalog, username, request)
+
+    async def test_without_authorization(self, client: httpx.AsyncClient):
+        request = _random_post_request()
+
+        resp = await _make_post(client, request)
+
+        _assert_code(resp, httpx.codes.UNAUTHORIZED)
+        _assert_body(resp, {"detail": "Not authenticated"})
+
+    async def test_with_incorrect_auth(self, client: httpx.AsyncClient):
+        request = _random_post_request()
+        client.headers["Authorization"] = "Bearer invalid_token"
+
+        resp = await _make_post(client, request)
+
+        _assert_code(resp, httpx.codes.FORBIDDEN)
+        _assert_body(resp, {"detail": "Forbidden"})
 
 
 class TestGETPost:
@@ -58,7 +78,6 @@ class TestGETPost:
     async def test_retrieving_post(self, client: httpx.AsyncClient, catalog: StubPostsCatalog):
         post = _random_post()
         catalog.add_post(post)
-
         resp = await _get_post(client, post["id"])
 
         _assert_code(resp, httpx.codes.OK)
@@ -88,7 +107,15 @@ def _random_user() -> dict:
 
 
 def _random_post() -> dict:
-    return {"id": fake.pyint(min_value=1)} | _random_post_request()
+    return {"id": fake.pyint(min_value=1), "author": fake.pystr()} | _random_post_request()
+
+
+def _authorize(client: httpx.AsyncClient, registry: StubUsersRegistry) -> str:
+    token = fake.pystr()
+    username = registry.add_token(token)
+
+    client.headers["Authorization"] = f"Bearer {token}"
+    return username
 
 
 async def _signup(client: httpx.AsyncClient, request: dict) -> httpx.Response:
@@ -124,9 +151,10 @@ def _assert_location(resp: httpx.Response, want: str):
     assert have == want, f"Invalid location received\nhave {have}\nwant {want}"
 
 
-def _assert_posted(catalog: StubPostsCatalog, post: dict):
+def _assert_posted(catalog: StubPostsCatalog, username: str, post: dict):
     assert len(catalog.post_calls) == 1, f"Have {len(catalog.post_calls)} calls to post, want 1"
-    assert catalog.post_calls[0] == post, f"Didn't post correct message, have {catalog.post_calls[0]}, want {post}"
+    err = f"Have {catalog.post_calls[0]} args to post call, want ({username}, {post})"
+    assert catalog.post_calls[0] == (username, post), err
 
 
 def _assert_body(resp: httpx.Response, body: dict):

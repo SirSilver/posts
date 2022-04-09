@@ -26,3 +26,13 @@ class Registry(Protocol):
             Access auth token.
         """
         ...
+
+    def authenticate(self, token: str) -> str:
+        """Authenticate user with a token.
+
+        Args:
+            token: auth token given on user login.
+        Returns:
+            Aunthenticated user name.
+        """
+        ...

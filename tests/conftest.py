@@ -57,23 +57,53 @@ class StubUsersRegistry:
         """
         return self._users[(username, password)]
 
+    def add_token(self, token: str) -> str:
+        """Add token to registry.
+
+        This is helper func for tests setup.
+
+        Args:
+            token: auth token
+        Returns:
+            Assigned to this token username.
+        """
+        username, password = fake.pystr(), fake.pystr()
+        self._users[(username, password)] = token
+        return username
+
+    def authenticate(self, token: str) -> dict | None:
+        """Authenticate user with a token.
+
+        Args:
+            token: auth token given on user login.
+        Returns:
+            Aunthenticated user.
+        """
+        try:
+            user, _ = next(u for u in self._users if self._users[u] == token)
+        except StopIteration:
+            return None
+
+        return user
+
 
 @dataclasses.dataclass
 class StubPostsCatalog:
     """Stub implementation of posts catalog for testing."""
 
-    post_calls: list[dict] = dataclasses.field(default_factory=list)
+    post_calls: list[tuple[str, dict]] = dataclasses.field(default_factory=list)
     _posts: dict[posts.ID, dict] = dataclasses.field(default_factory=dict)
 
-    def make_post(self, req: posts.MakePostRequest) -> posts.ID:
+    def make_post(self, author: str, req: posts.MakePostRequest) -> posts.ID:
         """Make a new post.
 
         Args:
+            author: user making new post.
             req: new post request.
         Returns:
             New post ID.
         """
-        self.post_calls.append(req.dict())
+        self.post_calls.append((author, req.dict()))
         return len(self.post_calls)
 
     def add_post(self, post: dict):
