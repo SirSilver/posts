@@ -115,7 +115,7 @@ def _assert_code(resp: httpx.Response, want: int):
 def _assert_registered(registry: StubUsersRegistry, request: dict):
     assert len(registry.signup_calls) == 1, f"Have {len(registry.signup_calls)} calls to signup, want 1"
     err = f"Didn't signup correct user, have {registry.signup_calls[0]}, want {request}"
-    assert registry.signup_calls[0] == request, err
+    assert registry.signup_calls[0] == (request["username"], request["password"]), err
 
 
 def _assert_location(resp: httpx.Response, want: str):

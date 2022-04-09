@@ -19,16 +19,17 @@ fake = faker.Faker()
 class StubUsersRegistry:
     """Stub implementatino of users registry for testing."""
 
-    signup_calls: list[dict] = dataclasses.field(default_factory=list)
+    signup_calls: list[tuple[str, str]] = dataclasses.field(default_factory=list)
     _users: dict[tuple, str] = dataclasses.field(default_factory=dict)
 
-    def signup(self, req: web.SignupRequest):
+    def signup(self, username: str, password: str):
         """Signup new user.
 
         Args:
-            req: new signup user request.
+            username: user login identificator.
+            password: user auth password.
         """
-        self.signup_calls.append(req.dict())
+        self.signup_calls.append((username, password))
 
     def add_user(self, user: dict) -> str:
         """Add user to registry.

@@ -12,11 +12,12 @@ PostID = int
 class UsersRegistry(Protocol):
     """Users registry."""
 
-    def signup(self, req: SignupRequest):
+    def signup(self, username: str, password: str):
         """Signup new user.
 
         Args:
-            req: new signup user request.
+            username: user login identificator.
+            password: user auth password.
         """
         ...
 
@@ -79,7 +80,7 @@ class SignupRequest(pydantic.BaseModel):
 
 @users_router.post("", status_code=201)
 def signup(req: SignupRequest, registry: UsersRegistry = fastapi.Depends(registry)):
-    registry.signup(req)
+    registry.signup(req.username, req.password)
     return {"links": [{"rel": "login", "href": "/login", "action": "POST"}]}
 
 
