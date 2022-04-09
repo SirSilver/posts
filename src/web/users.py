@@ -55,7 +55,4 @@ def optional_user(
     if not token:
         return None
 
-    if (username := registry.authenticate(token)) is None:
-        raise fastapi.HTTPException(fastapi.status.HTTP_403_FORBIDDEN)
-
-    return username
+    return current_user(token, registry)
