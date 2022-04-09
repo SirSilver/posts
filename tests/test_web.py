@@ -81,7 +81,7 @@ class TestGETPost:
         resp = await _get_post(client, post["id"])
 
         _assert_code(resp, httpx.codes.OK)
-        _assert_body(resp, post)
+        _assert_body(resp, post | {"links": [{"rel": "like", "href": f"/posts/{post['id']}/likes", "action": "POST"}]})
 
     async def test_with_non_existent_post(self, client: httpx.AsyncClient):
         resp = await _get_post(client, fake.pyint(min_value=1))

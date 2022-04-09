@@ -10,6 +10,14 @@ import posts
 from web import users
 
 
+class Link(pydantic.BaseModel):
+    """Response model for returning links corresponding to HATEOAS."""
+
+    rel: str
+    href: str
+    action: str
+
+
 class PostResponse(pydantic.BaseModel):
     """Response model for retrieving post details."""
 
@@ -17,6 +25,7 @@ class PostResponse(pydantic.BaseModel):
     author: str
     title: str
     description: str
+    links: list[Link]
 
 
 router = fastapi.APIRouter(prefix="/posts", tags=["posts"])
@@ -44,4 +53,4 @@ def get_post(post_id: posts.ID, catalog: posts.Catalog = fastapi.Depends(catalog
     if post is None:
         raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
 
-    return post
+    return post | {"links": [{"rel": "like", "href": f"/posts/{post_id}/likes", "action": "POST"}]}
