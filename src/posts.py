@@ -9,6 +9,10 @@ import pydantic
 ID = int
 
 
+class AlreadyLiked(Exception):
+    """User already liked the post."""
+
+
 class MakePostRequest(pydantic.BaseModel):
     """Request for a new post."""
 
@@ -48,5 +52,14 @@ class Catalog(Protocol):
             username: checking user.
         Returns:
             Whether the user has liked the post.
+        """
+        ...
+
+    def like(self, post_id: ID, username):
+        """Like post.
+
+        Args:
+            post_id: unique ID to look for.
+            username: checking user.
         """
         ...

@@ -117,6 +117,44 @@ class TestGETPost:
         _assert_body(resp, post | {"links": want_links})
 
 
+class TestPOSTLikes:
+    """Test post resource POST like endpoint."""
+
+    async def test_liking_post(self, client: httpx.AsyncClient, catalog: StubPostsCatalog, registry: StubUsersRegistry):
+        post = _random_post()
+        catalog.add_post(post)
+        username = _authorize(client, registry)
+
+        resp = await _like_post(client, post["id"])
+
+        _assert_code(resp, httpx.codes.OK)
+        _assert_body(resp, {"links": [{"rel": "unlike", "href": f"/posts/{post['id']}/likes", "action": "DELETE"}]})
+        _assert_liked(catalog, post["id"], username)
+
+    async def test_with_unauth_user(self, client: httpx.AsyncClient, catalog: StubPostsCatalog):
+        post = _random_post()
+        catalog.add_post(post)
+
+        resp = await _like_post(client, post["id"])
+
+        _assert_code(resp, httpx.codes.UNAUTHORIZED)
+        _assert_no_likes(catalog)
+
+    async def test_with_already_liked_user(
+        self, client: httpx.AsyncClient, catalog: StubPostsCatalog, registry: StubUsersRegistry
+    ):
+        post = _random_post()
+        catalog.add_post(post)
+        username = _authorize(client, registry)
+        catalog.add_like(username, post["id"])
+
+        resp = await _like_post(client, post["id"])
+
+        _assert_code(resp, httpx.codes.FORBIDDEN)
+        _assert_body(resp, {"detail": "You already liked this post"})
+        _assert_no_likes(catalog)
+
+
 def _random_signup_request() -> dict:
     return {"username": fake.pystr(), "password": fake.pystr()}
 
@@ -164,6 +202,10 @@ async def _get_post(client: httpx.AsyncClient, post_id: posts.ID) -> httpx.Respo
     return await client.get(f"/posts/{post_id}")
 
 
+async def _like_post(client: httpx.AsyncClient, post_id: posts.ID) -> httpx.Response:
+    return await client.post(f"/posts/{post_id}/likes")
+
+
 def _assert_code(resp: httpx.Response, want: int):
     have = resp.status_code
     assert have == want, f"Invalid status code received\nhave {have}\nwant {want}"
@@ -189,3 +231,13 @@ def _assert_posted(catalog: StubPostsCatalog, username: str, post: dict):
 
 def _assert_body(resp: httpx.Response, body: dict):
     assert resp.json() == body, f"Didn't get correct response, have {resp.json()}, want {body}"
+
+
+def _assert_liked(catalog: StubPostsCatalog, post_id: posts.ID, username: str):
+    assert len(catalog.likes_calls) == 1, f"Have {len(catalog.likes_calls)} calls to like, want 1"
+    err = f"Have {catalog.likes_calls[0]} args to like call, want ({post_id}, {username})"
+    assert catalog.likes_calls[0] == (post_id, username), err
+
+
+def _assert_no_likes(catalog: StubPostsCatalog):
+    assert not catalog.likes_calls, "Catalog has likes"

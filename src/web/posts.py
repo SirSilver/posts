@@ -70,3 +70,17 @@ def get_post(
         links.append({"rel": "like", "href": f"/posts/{post_id}/likes", "action": "POST"})
 
     return resp
+
+
+@router.post("/{post_id}/likes")
+def like(
+    post_id: posts.ID,
+    catalog: posts.Catalog = fastapi.Depends(catalog),
+    username: str = fastapi.Depends(users.current_user),
+):
+    try:
+        catalog.like(post_id, username)
+    except posts.AlreadyLiked:
+        raise fastapi.HTTPException(fastapi.status.HTTP_403_FORBIDDEN, "You already liked this post")
+
+    return {"links": [{"rel": "unlike", "href": f"/posts/{post_id}/likes", "action": "DELETE"}]}
