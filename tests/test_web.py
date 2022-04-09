@@ -60,7 +60,7 @@ class TestPOSTPosts:
         resp = await _make_post(client, request)
 
         _assert_code(resp, httpx.codes.UNAUTHORIZED)
-        _assert_body(resp, {"detail": "Not authenticated"})
+        _assert_body(resp, {"detail": "Unauthorized"})
 
     async def test_with_incorrect_auth(self, client: httpx.AsyncClient):
         request = _random_post_request()
@@ -78,6 +78,7 @@ class TestGETPost:
     async def test_retrieving_post(self, client: httpx.AsyncClient, catalog: StubPostsCatalog):
         post = _random_post()
         catalog.add_post(post)
+
         resp = await _get_post(client, post["id"])
 
         _assert_code(resp, httpx.codes.OK)
@@ -88,6 +89,18 @@ class TestGETPost:
 
         _assert_code(resp, httpx.codes.NOT_FOUND)
         _assert_body(resp, {"detail": "Not Found"})
+
+    async def test_retrieving_as_post_author(
+        self, client: httpx.AsyncClient, catalog: StubPostsCatalog, registry: StubUsersRegistry
+    ):
+        username = _authorize(client, registry)
+        post = _random_post(username)
+        catalog.add_post(post)
+
+        resp = await _get_post(client, post["id"])
+
+        _assert_code(resp, httpx.codes.OK)
+        _assert_body(resp, post | {"links": []})
 
 
 def _random_signup_request() -> dict:
@@ -106,8 +119,11 @@ def _random_user() -> dict:
     return {"username": fake.pystr(), "password": fake.pystr()}
 
 
-def _random_post() -> dict:
-    return {"id": fake.pyint(min_value=1), "author": fake.pystr()} | _random_post_request()
+def _random_post(author: str | None = None) -> dict:
+    if author is None:
+        author = fake.pystr()
+
+    return {"id": fake.pyint(min_value=1), "author": author} | _random_post_request()
 
 
 def _authorize(client: httpx.AsyncClient, registry: StubUsersRegistry) -> str:

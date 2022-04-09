@@ -25,7 +25,7 @@ class PostResponse(pydantic.BaseModel):
     author: str
     title: str
     description: str
-    links: list[Link]
+    links: list[Link] = pydantic.Field(default_factory=list)
 
 
 router = fastapi.APIRouter(prefix="/posts", tags=["posts"])
@@ -47,10 +47,19 @@ def create_post(
 
 
 @router.get("/{post_id}", response_model=PostResponse)
-def get_post(post_id: posts.ID, catalog: posts.Catalog = fastapi.Depends(catalog)):
+def get_post(
+    post_id: posts.ID,
+    catalog: posts.Catalog = fastapi.Depends(catalog),
+    username: str = fastapi.Depends(users.optional_user),
+):
     post = catalog.get(post_id)
 
     if post is None:
         raise fastapi.HTTPException(status_code=fastapi.status.HTTP_404_NOT_FOUND)
 
-    return post | {"links": [{"rel": "like", "href": f"/posts/{post_id}/likes", "action": "POST"}]}
+    links = []
+
+    if post["author"] != username:
+        links.append({"rel": "like", "href": f"/posts/{post_id}/likes", "action": "POST"})
+
+    return post | {"links": links}
