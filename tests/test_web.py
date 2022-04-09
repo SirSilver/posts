@@ -7,7 +7,7 @@ import httpx
 
 if TYPE_CHECKING:
     from tests.conftest import StubPostsCatalog, StubUsersRegistry
-    import web
+    import posts
 
 fake = faker.Faker()
 
@@ -103,7 +103,7 @@ async def _make_post(client: httpx.AsyncClient, post: dict) -> httpx.Response:
     return await client.post("/posts", json=post)
 
 
-async def _get_post(client: httpx.AsyncClient, post_id: web.PostID) -> httpx.Response:
+async def _get_post(client: httpx.AsyncClient, post_id: posts.ID) -> httpx.Response:
     return await client.get(f"/posts/{post_id}")
 
 

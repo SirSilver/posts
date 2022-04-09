@@ -2,5 +2,5 @@
 
 
 from web.app import create_app
-from web.posts import catalog, PostID, PostRequest
+from web.posts import catalog
 from web.users import registry

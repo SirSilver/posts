@@ -9,6 +9,7 @@ import faker
 import httpx
 import pytest
 
+import posts
 import web
 
 
@@ -62,9 +63,9 @@ class StubPostsCatalog:
     """Stub implementation of posts catalog for testing."""
 
     post_calls: list[dict] = dataclasses.field(default_factory=list)
-    _posts: dict[web.PostID, dict] = dataclasses.field(default_factory=dict)
+    _posts: dict[posts.ID, dict] = dataclasses.field(default_factory=dict)
 
-    def make_post(self, req: web.PostRequest) -> web.PostID:
+    def make_post(self, req: posts.MakePostRequest) -> posts.ID:
         """Make a new post.
 
         Args:
@@ -85,7 +86,7 @@ class StubPostsCatalog:
         """
         self._posts[post["id"]] = post
 
-    def get(self, post_id: web.PostID) -> Optional[dict]:
+    def get(self, post_id: posts.ID) -> Optional[dict]:
         """Get post from catalog.
 
         Args:
