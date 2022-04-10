@@ -113,7 +113,7 @@ class TestGETPost:
         resp = await _get_post(client, post["id"])
 
         _assert_code(resp, httpx.codes.OK)
-        want_links = [{"rel": "unlike", "href": f"/posts/{post['id']}/likes", "action": "DELETE"}]
+        want_links = [{"rel": "unlike", "href": f"/posts/{post['id']}/like", "action": "DELETE"}]
         _assert_body(resp, post | {"links": want_links})
 
 
@@ -128,7 +128,7 @@ class TestPOSTLikes:
         resp = await _like_post(client, post["id"])
 
         _assert_code(resp, httpx.codes.OK)
-        _assert_body(resp, {"links": [{"rel": "unlike", "href": f"/posts/{post['id']}/likes", "action": "DELETE"}]})
+        _assert_body(resp, {"links": [{"rel": "unlike", "href": f"/posts/{post['id']}/like", "action": "DELETE"}]})
         _assert_liked(catalog, post["id"], username)
 
     async def test_with_unauth_user(self, client: httpx.AsyncClient, catalog: StubPostsCatalog):
@@ -169,7 +169,7 @@ class TestDELETELikes:
         resp = await _unlike_post(client, post["id"])
 
         _assert_code(resp, httpx.codes.NO_CONTENT)
-        _assert_body(resp, {"links": [{"rel": "like", "href": f"/posts/{post['id']}/likes", "action": "POST"}]})
+        _assert_body(resp, {"links": [{"rel": "like", "href": f"/posts/{post['id']}/like", "action": "POST"}]})
         _assert_unliked(catalog, post["id"], username)
 
     async def test_with_unauth_user(self, client: httpx.AsyncClient, catalog: StubPostsCatalog):
@@ -241,11 +241,11 @@ async def _get_post(client: httpx.AsyncClient, post_id: posts.ID) -> httpx.Respo
 
 
 async def _like_post(client: httpx.AsyncClient, post_id: posts.ID) -> httpx.Response:
-    return await client.post(f"/posts/{post_id}/likes")
+    return await client.post(f"/posts/{post_id}/like")
 
 
 async def _unlike_post(client: httpx.AsyncClient, post_id: posts.ID) -> httpx.Response:
-    return await client.delete(f"/posts/{post_id}/likes")
+    return await client.delete(f"/posts/{post_id}/like")
 
 
 def _assert_code(resp: httpx.Response, want: int):
@@ -276,13 +276,13 @@ def _assert_body(resp: httpx.Response, body: dict):
 
 
 def _assert_liked(catalog: StubPostsCatalog, post_id: posts.ID, username: str):
-    assert len(catalog.likes_calls) == 1, f"Have {len(catalog.likes_calls)} calls to like, want 1"
-    err = f"Have {catalog.likes_calls[0]} args to like call, want ({post_id}, {username})"
-    assert catalog.likes_calls[0] == (post_id, username), err
+    assert len(catalog.like_calls) == 1, f"Have {len(catalog.like_calls)} calls to like, want 1"
+    err = f"Have {catalog.like_calls[0]} args to like call, want ({post_id}, {username})"
+    assert catalog.like_calls[0] == (post_id, username), err
 
 
 def _assert_no_likes(catalog: StubPostsCatalog):
-    assert not catalog.likes_calls, "Catalog has likes"
+    assert not catalog.like_calls, "Catalog has likes"
 
 
 def _assert_unliked(catalog: StubPostsCatalog, post_id: posts.ID, username: str):

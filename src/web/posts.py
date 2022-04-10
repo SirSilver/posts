@@ -65,14 +65,14 @@ def get_post(
         return resp
 
     if catalog.has_like(post["id"], username):
-        links.append({"rel": "unlike", "href": f"/posts/{post_id}/likes", "action": "DELETE"})
+        links.append({"rel": "unlike", "href": f"/posts/{post_id}/like", "action": "DELETE"})
     else:
-        links.append({"rel": "like", "href": f"/posts/{post_id}/likes", "action": "POST"})
+        links.append({"rel": "like", "href": f"/posts/{post_id}/like", "action": "POST"})
 
     return resp
 
 
-@router.post("/{post_id}/likes")
+@router.post("/{post_id}/like")
 def like(
     post_id: posts.ID,
     catalog: posts.Catalog = fastapi.Depends(catalog),
@@ -83,10 +83,10 @@ def like(
     except posts.AlreadyLiked:
         raise fastapi.HTTPException(fastapi.status.HTTP_403_FORBIDDEN, "You already liked this post")
 
-    return {"links": [{"rel": "unlike", "href": f"/posts/{post_id}/likes", "action": "DELETE"}]}
+    return {"links": [{"rel": "unlike", "href": f"/posts/{post_id}/like", "action": "DELETE"}]}
 
 
-@router.delete("/{post_id}/likes", status_code=fastapi.status.HTTP_204_NO_CONTENT)
+@router.delete("/{post_id}/like", status_code=fastapi.status.HTTP_204_NO_CONTENT)
 def unlike(
     post_id: posts.ID,
     catalog: posts.Catalog = fastapi.Depends(catalog),
@@ -97,4 +97,4 @@ def unlike(
     except posts.NotLiked:
         raise fastapi.HTTPException(fastapi.status.HTTP_403_FORBIDDEN, "You did not liked this post")
 
-    return {"links": [{"rel": "like", "href": f"/posts/{post_id}/likes", "action": "POST"}]}
+    return {"links": [{"rel": "like", "href": f"/posts/{post_id}/like", "action": "POST"}]}

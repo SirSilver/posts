@@ -94,7 +94,7 @@ class StubPostsCatalog:
     """Stub implementation of posts catalog for testing."""
 
     post_calls: list[tuple[str, dict]] = dataclasses.field(default_factory=list)
-    likes_calls: list[tuple[posts.ID, str]] = dataclasses.field(default_factory=list)
+    like_calls: list[tuple[posts.ID, str]] = dataclasses.field(default_factory=list)
     unlike_calls: list[tuple[posts.ID, str]] = dataclasses.field(default_factory=list)
     _posts: dict[posts.ID, dict] = dataclasses.field(default_factory=dict)
     _likes: dict[posts.ID, list[str]] = dataclasses.field(default_factory=functools.partial(collections.defaultdict, list))
@@ -166,7 +166,7 @@ class StubPostsCatalog:
         if username in self._likes[post_id]:
             raise posts.AlreadyLiked
 
-        self.likes_calls.append((post_id, username))
+        self.like_calls.append((post_id, username))
 
     def unlike(self, post_id: posts.ID, username):
         """Unlike post.
