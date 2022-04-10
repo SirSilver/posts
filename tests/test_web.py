@@ -116,6 +116,18 @@ class TestGETPost:
         want_links = [{"rel": "unlike", "href": f"/posts/{post['id']}/like", "action": "DELETE"}]
         _assert_body(resp, post | {"links": want_links})
 
+    async def test_with_user_did_not_like_the_post(
+        self, client: httpx.AsyncClient, catalog: StubPostsCatalog, registry: StubUsersRegistry
+    ):
+        post = _random_post()
+        catalog.add_post(post)
+        _authorize(client, registry)
+
+        resp = await _get_post(client, post["id"])
+
+        _assert_code(resp, httpx.codes.OK)
+        _assert_body(resp, post | {"links": [{"rel": "like", "href": f"/posts/{post['id']}/like", "action": "POST"}]})
+
 
 class TestPOSTLikes:
     """Test post resource POST like endpoint."""
