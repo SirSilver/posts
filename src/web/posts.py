@@ -65,9 +65,9 @@ def get_post(
         return resp
 
     if catalog.has_like(post["id"], username):
-        links.append({"rel": "unlike", "href": f"/posts/{post_id}/like", "action": "DELETE"})
+        links.append(_link("unlike", f"/posts/{post_id}/like", "DELETE"))
     else:
-        links.append({"rel": "like", "href": f"/posts/{post_id}/like", "action": "POST"})
+        links.append(_link("like", f"/posts/{post_id}/like", "POST"))
 
     return resp
 
@@ -83,7 +83,7 @@ def like(
     except posts.AlreadyLiked:
         raise fastapi.HTTPException(fastapi.status.HTTP_403_FORBIDDEN, "You already liked this post")
 
-    return {"links": [{"rel": "unlike", "href": f"/posts/{post_id}/like", "action": "DELETE"}]}
+    return {"links": [_link("unlike", f"/posts/{post_id}/like", "DELETE")]}
 
 
 @router.delete("/{post_id}/like", status_code=fastapi.status.HTTP_204_NO_CONTENT)
@@ -97,4 +97,8 @@ def unlike(
     except posts.NotLiked:
         raise fastapi.HTTPException(fastapi.status.HTTP_403_FORBIDDEN, "You did not liked this post")
 
-    return {"links": [{"rel": "like", "href": f"/posts/{post_id}/like", "action": "POST"}]}
+    return {"links": [_link("like", f"/posts/{post_id}/like", "POST")]}
+
+
+def _link(rel: str, href: str, action: str) -> dict:
+    return {"rel": rel, "href": href, "action": action}
