@@ -13,6 +13,10 @@ class AlreadyLiked(Exception):
     """User already liked the post."""
 
 
+class NotLiked(Exception):
+    """User did not liked the post."""
+
+
 class MakePostRequest(pydantic.BaseModel):
     """Request for a new post."""
 
@@ -61,5 +65,14 @@ class Catalog(Protocol):
         Args:
             post_id: unique ID to look for.
             username: checking user.
+        """
+        ...
+
+    def unlike(self, post_id: ID, username):
+        """Unlike post.
+
+        Args:
+            post_id: unique ID to look for.
+            username: user has liked post before.
         """
         ...

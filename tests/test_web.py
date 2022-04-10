@@ -155,6 +155,44 @@ class TestPOSTLikes:
         _assert_no_likes(catalog)
 
 
+class TestDELETELikes:
+    """Test post resource DELETE like endpoint."""
+
+    async def test_unliking_post(
+        self, client: httpx.AsyncClient, catalog: StubPostsCatalog, registry: StubUsersRegistry
+    ):
+        post = _random_post()
+        catalog.add_post(post)
+        username = _authorize(client, registry)
+        catalog.add_like(username, post["id"])
+
+        resp = await _unlike_post(client, post["id"])
+
+        _assert_code(resp, httpx.codes.NO_CONTENT)
+        _assert_body(resp, {"links": [{"rel": "like", "href": f"/posts/{post['id']}/likes", "action": "POST"}]})
+        _assert_unliked(catalog, post["id"], username)
+
+    async def test_with_unauth_user(self, client: httpx.AsyncClient, catalog: StubPostsCatalog):
+        post = _random_post()
+        catalog.add_post(post)
+
+        resp = await _unlike_post(client, post["id"])
+
+        _assert_code(resp, httpx.codes.UNAUTHORIZED)
+
+    async def test_without_like_from_user(
+        self, client: httpx.AsyncClient, catalog: StubPostsCatalog, registry: StubUsersRegistry
+    ):
+        post = _random_post()
+        catalog.add_post(post)
+        _authorize(client, registry)
+
+        resp = await _unlike_post(client, post["id"])
+
+        _assert_code(resp, httpx.codes.FORBIDDEN)
+        _assert_body(resp, {"detail": "You did not liked this post"})
+
+
 def _random_signup_request() -> dict:
     return {"username": fake.pystr(), "password": fake.pystr()}
 
@@ -206,6 +244,10 @@ async def _like_post(client: httpx.AsyncClient, post_id: posts.ID) -> httpx.Resp
     return await client.post(f"/posts/{post_id}/likes")
 
 
+async def _unlike_post(client: httpx.AsyncClient, post_id: posts.ID) -> httpx.Response:
+    return await client.delete(f"/posts/{post_id}/likes")
+
+
 def _assert_code(resp: httpx.Response, want: int):
     have = resp.status_code
     assert have == want, f"Invalid status code received\nhave {have}\nwant {want}"
@@ -241,3 +283,9 @@ def _assert_liked(catalog: StubPostsCatalog, post_id: posts.ID, username: str):
 
 def _assert_no_likes(catalog: StubPostsCatalog):
     assert not catalog.likes_calls, "Catalog has likes"
+
+
+def _assert_unliked(catalog: StubPostsCatalog, post_id: posts.ID, username: str):
+    assert len(catalog.unlike_calls) == 1, f"Have {len(catalog.unlike_calls)} calls to unlike, want 1"
+    err = f"Have {catalog.unlike_calls[0]} args to unlike call, want ({post_id}, {username})"
+    assert catalog.unlike_calls[0] == (post_id, username), err

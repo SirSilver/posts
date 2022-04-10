@@ -84,3 +84,17 @@ def like(
         raise fastapi.HTTPException(fastapi.status.HTTP_403_FORBIDDEN, "You already liked this post")
 
     return {"links": [{"rel": "unlike", "href": f"/posts/{post_id}/likes", "action": "DELETE"}]}
+
+
+@router.delete("/{post_id}/likes", status_code=fastapi.status.HTTP_204_NO_CONTENT)
+def unlike(
+    post_id: posts.ID,
+    catalog: posts.Catalog = fastapi.Depends(catalog),
+    username: str = fastapi.Depends(users.current_user),
+):
+    try:
+        catalog.unlike(post_id, username)
+    except posts.NotLiked:
+        raise fastapi.HTTPException(fastapi.status.HTTP_403_FORBIDDEN, "You did not liked this post")
+
+    return {"links": [{"rel": "like", "href": f"/posts/{post_id}/likes", "action": "POST"}]}
