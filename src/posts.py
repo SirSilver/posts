@@ -4,27 +4,33 @@
 from typing import Optional
 
 import pydantic
-import sqlalchemy
+import sqlalchemy as sa
 from sqlalchemy.engine import base
 
 
 ID = int
 
 
-metadata = sqlalchemy.MetaData()
-users_table = sqlalchemy.Table(
+metadata = sa.MetaData()
+users_table = sa.Table(
     "users",
     metadata,
-    sqlalchemy.Column("username", sqlalchemy.String, primary_key=True),
-    sqlalchemy.Column("password", sqlalchemy.String, nullable=False),
+    sa.Column("username", sa.String, primary_key=True),
+    sa.Column("password", sa.String, nullable=False),
 )
-table = sqlalchemy.Table(
+table = sa.Table(
     "posts",
     metadata,
-    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
-    sqlalchemy.Column("author", None, sqlalchemy.ForeignKey("users.username")),
-    sqlalchemy.Column("title", sqlalchemy.String, nullable=False),
-    sqlalchemy.Column("description", sqlalchemy.String, nullable=False),
+    sa.Column("id", sa.Integer, primary_key=True),
+    sa.Column("author", None, sa.ForeignKey("users.username")),
+    sa.Column("title", sa.String, nullable=False),
+    sa.Column("description", sa.String, nullable=False),
+)
+likes_table = sa.Table(
+    "likes",
+    metadata,
+    sa.Column("user", None, sa.ForeignKey("users.username")),
+    sa.Column("post", None, sa.ForeignKey("posts.id")),
 )
 
 
@@ -87,7 +93,9 @@ class Catalog:
         Returns:
             Whether the user has liked the post.
         """
-        ...
+        select = likes_table.select().where(likes_table.c.post == post_id and likes_table.c.user == username)
+        result = self._connection.execute(select)
+        return bool(result.fetchone())
 
     def like(self, post_id: ID, username):
         """Like post.

@@ -13,7 +13,7 @@ posts.metadata.create_all(engine)
 def test_making_new_post():
     with engine.begin() as connection:
         catalog = posts.Catalog(connection)
-        author = _random_author()
+        author = _random_user()
         request = _new_post_request()
 
         post_id = catalog.make_post(author, request)
@@ -41,10 +41,35 @@ class TestGetPost:
 
             result = catalog.get(fake.pyint(min_value=1))
 
-            assert result is None
+            assert result is None, "Post does not have a like from user"
 
 
-def _random_author() -> str:
+class TestHasLike:
+    def test_with_existing_like(self):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            username = _random_user()
+            post = _new_post(username)
+            _insert_post(connection, post)
+            _like_post(connection, post, username)
+
+            result = catalog.has_like(post["id"], username)
+
+            assert result is True
+
+    def test_with_non_existing_like(self):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            username = _random_user()
+            post = _new_post()
+            _insert_post(connection, post)
+
+            result = catalog.has_like(post["id"], username)
+
+            assert result is False, "Post has a like from user"
+
+
+def _random_user() -> str:
     return fake.pystr()
 
 
@@ -52,10 +77,13 @@ def _new_post_request() -> posts.MakePostRequest:
     return posts.MakePostRequest(title=fake.pystr(), description=fake.pystr())
 
 
-def _new_post() -> dict:
+def _new_post(author: str | None = None) -> dict:
+    if author is None:
+        author = _random_user()
+
     return {
         "id": fake.pyint(min_value=1),
-        "author": _random_author(),
+        "author": _random_user(),
         "title": fake.pystr(),
         "description": fake.pystr(),
     }
@@ -65,6 +93,11 @@ def _insert_post(connection: base.Connection, post: dict):
     insert = posts.table.insert().values(
         id=post["id"], author=post["author"], title=post["title"], description=post["description"]
     )
+    connection.execute(insert)
+
+
+def _like_post(connection: base.Connection, post: dict, author: str):
+    insert = posts.likes_table.insert().values(user=author, post=post["id"])
     connection.execute(insert)
 
 
