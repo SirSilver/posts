@@ -1,12 +1,31 @@
 """Posts module."""
 
 
-from typing import Optional, Protocol
+from typing import Optional
 
 import pydantic
+import sqlalchemy
+from sqlalchemy.engine import base
 
 
 ID = int
+
+
+metadata = sqlalchemy.MetaData()
+users_table = sqlalchemy.Table(
+    "users",
+    metadata,
+    sqlalchemy.Column("username", sqlalchemy.String, primary_key=True),
+    sqlalchemy.Column("password", sqlalchemy.String, nullable=False),
+)
+table = sqlalchemy.Table(
+    "posts",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
+    sqlalchemy.Column("author", None, sqlalchemy.ForeignKey("users.username")),
+    sqlalchemy.Column("title", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("description", sqlalchemy.String, nullable=False),
+)
 
 
 class AlreadyLiked(Exception):
@@ -24,8 +43,11 @@ class MakePostRequest(pydantic.BaseModel):
     description: str
 
 
-class Catalog(Protocol):
+class Catalog:
     """Catalog of users posts."""
+
+    def __init__(self, connection: base.Connection):
+        self._connection = connection
 
     def make_post(self, author: str, req: MakePostRequest) -> ID:
         """Make a new post.
@@ -36,7 +58,9 @@ class Catalog(Protocol):
         Returns:
             New post ID.
         """
-        ...
+        stmt = table.insert().values(author=author, title=req.title, description=req.description)
+        result = self._connection.execute(stmt)
+        return result.inserted_primary_key.id
 
     def get(self, post_id: ID) -> Optional[dict]:
         """Get post from catalog.
