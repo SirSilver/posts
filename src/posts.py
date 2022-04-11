@@ -70,7 +70,13 @@ class Catalog:
         Returns:
             Saved post in catalog if found.
         """
-        ...
+        select = table.select().where(table.c.id == post_id)
+        result = self._connection.execute(select).fetchone()
+
+        if not result:
+            return None
+
+        return dict(result)
 
     def has_like(self, post_id: ID, username: str) -> bool:
         """Check whether the user has liked the post.
