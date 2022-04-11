@@ -36,3 +36,11 @@ class Registry(Protocol):
             Aunthenticated user name.
         """
         ...
+
+    def track_activity(self, username: str):
+        """Track user activity.
+
+        Args:
+            username: user login identificator.
+        """
+        ...

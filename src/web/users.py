@@ -29,7 +29,9 @@ def signup(req: SignupRequest, registry: users.Registry = fastapi.Depends(regist
 
 @router.post("/login")
 def login(req: SignupRequest, registry: users.Registry = fastapi.Depends(registry)):
-    return {"token": registry.login(req.username, req.password)}
+    response = {"token": registry.login(req.username, req.password)}
+    registry.track_activity(req.username)
+    return response
 
 
 oauth2_scheme = security.OAuth2PasswordBearer(tokenUrl="/users/login", auto_error=False)
@@ -56,3 +58,14 @@ def optional_user(
         return None
 
     return current_user(token, registry)
+
+
+async def track_activity(
+    username: str | None = fastapi.Depends(optional_user),
+    registry: users.Registry = fastapi.Depends(registry),
+):
+    """Dependency for tracking user activity."""
+    if username is None:
+        return
+
+    registry.track_activity(username)

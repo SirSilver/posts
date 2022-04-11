@@ -37,6 +37,7 @@ class TestPOSTLogin:
 
         _assert_code(resp, httpx.codes.OK)
         _assert_body(resp, {"token": token})
+        _assert_activity_tracked(registry, user["username"])
 
 
 class TestPOSTPosts:
@@ -53,6 +54,7 @@ class TestPOSTPosts:
         _assert_code(resp, httpx.codes.CREATED)
         _assert_location(resp, "/posts/1")
         _assert_posted(catalog, username, request)
+        _assert_activity_tracked(registry, username)
 
     async def test_without_authorization(self, client: httpx.AsyncClient):
         request = _random_post_request()
@@ -101,6 +103,7 @@ class TestGETPost:
 
         _assert_code(resp, httpx.codes.OK)
         _assert_body(resp, post | {"links": []})
+        _assert_activity_tracked(registry, username)
 
     async def test_with_user_already_liked_the_post(
         self, client: httpx.AsyncClient, catalog: StubPostsCatalog, registry: StubUsersRegistry
@@ -115,18 +118,20 @@ class TestGETPost:
         _assert_code(resp, httpx.codes.OK)
         want_links = [{"rel": "unlike", "href": f"/posts/{post['id']}/like", "action": "DELETE"}]
         _assert_body(resp, post | {"links": want_links})
+        _assert_activity_tracked(registry, username)
 
     async def test_with_user_did_not_like_the_post(
         self, client: httpx.AsyncClient, catalog: StubPostsCatalog, registry: StubUsersRegistry
     ):
         post = _random_post()
         catalog.add_post(post)
-        _authorize(client, registry)
+        username = _authorize(client, registry)
 
         resp = await _get_post(client, post["id"])
 
         _assert_code(resp, httpx.codes.OK)
         _assert_body(resp, post | {"links": [{"rel": "like", "href": f"/posts/{post['id']}/like", "action": "POST"}]})
+        _assert_activity_tracked(registry, username)
 
 
 class TestPOSTLikes:
@@ -142,6 +147,7 @@ class TestPOSTLikes:
         _assert_code(resp, httpx.codes.OK)
         _assert_body(resp, {"links": [{"rel": "unlike", "href": f"/posts/{post['id']}/like", "action": "DELETE"}]})
         _assert_liked(catalog, post["id"], username)
+        _assert_activity_tracked(registry, username)
 
     async def test_with_unauth_user(self, client: httpx.AsyncClient, catalog: StubPostsCatalog):
         post = _random_post()
@@ -165,6 +171,7 @@ class TestPOSTLikes:
         _assert_code(resp, httpx.codes.FORBIDDEN)
         _assert_body(resp, {"detail": "You already liked this post"})
         _assert_no_likes(catalog)
+        _assert_activity_tracked(registry, username)
 
 
 class TestDELETELikes:
@@ -183,6 +190,7 @@ class TestDELETELikes:
         _assert_code(resp, httpx.codes.NO_CONTENT)
         _assert_body(resp, {"links": [{"rel": "like", "href": f"/posts/{post['id']}/like", "action": "POST"}]})
         _assert_unliked(catalog, post["id"], username)
+        _assert_activity_tracked(registry, username)
 
     async def test_with_unauth_user(self, client: httpx.AsyncClient, catalog: StubPostsCatalog):
         post = _random_post()
@@ -197,12 +205,13 @@ class TestDELETELikes:
     ):
         post = _random_post()
         catalog.add_post(post)
-        _authorize(client, registry)
+        username = _authorize(client, registry)
 
         resp = await _unlike_post(client, post["id"])
 
         _assert_code(resp, httpx.codes.FORBIDDEN)
         _assert_body(resp, {"detail": "You did not liked this post"})
+        _assert_activity_tracked(registry, username)
 
 
 def _random_signup_request() -> dict:
@@ -301,3 +310,8 @@ def _assert_unliked(catalog: StubPostsCatalog, post_id: posts.ID, username: str)
     assert len(catalog.unlike_calls) == 1, f"Have {len(catalog.unlike_calls)} calls to unlike, want 1"
     err = f"Have {catalog.unlike_calls[0]} args to unlike call, want ({post_id}, {username})"
     assert catalog.unlike_calls[0] == (post_id, username), err
+
+
+def _assert_activity_tracked(registry: StubUsersRegistry, username: str):
+    assert len(registry.track_calls) == 1, f"Have {len(registry.track_calls)} calls to track user, want 1"
+    assert registry.track_calls[0] == username, f"Have {registry.track_calls[0]} args to track call, want {username}"

@@ -23,6 +23,7 @@ class StubUsersRegistry:
     """Stub implementatino of users registry for testing."""
 
     signup_calls: list[tuple[str, str]] = dataclasses.field(default_factory=list)
+    track_calls: list[str] = dataclasses.field(default_factory=list)
     _users: dict[tuple, str] = dataclasses.field(default_factory=dict)
 
     def signup(self, username: str, password: str):
@@ -87,6 +88,14 @@ class StubUsersRegistry:
             return None
 
         return user
+
+    def track_activity(self, username: str):
+        """Track user activity.
+
+        Args:
+            username: user login identificator.
+        """
+        self.track_calls.append(username)
 
 
 @dataclasses.dataclass

@@ -28,7 +28,7 @@ class PostResponse(pydantic.BaseModel):
     links: list[Link] = pydantic.Field(default_factory=list)
 
 
-router = fastapi.APIRouter(prefix="/posts", tags=["posts"])
+router = fastapi.APIRouter(prefix="/posts", tags=["posts"], dependencies=[fastapi.Depends(users.track_activity)])
 
 
 def catalog() -> posts.Catalog:
