@@ -90,14 +90,15 @@ def _new_post(author: str | None = None) -> dict:
 
 
 def _insert_post(connection: base.Connection, post: dict):
-    insert = posts.table.insert().values(
-        id=post["id"], author=post["author"], title=post["title"], description=post["description"]
-    )
+    text = "INSERT INTO posts (id, author, title, description) VALUES (:id, :author, :title, :description)"
+    values = dict(id=post["id"], author=post["author"], title=post["title"], description=post["description"])
+    insert = sqlalchemy.text(text).bindparams(**values)
     connection.execute(insert)
 
 
 def _like_post(connection: base.Connection, post: dict, author: str):
-    insert = posts.likes_table.insert().values(user=author, post=post["id"])
+    text = "INSERT INTO likes (user, post) VALUES (:user, :post)"
+    insert = sqlalchemy.text(text).bindparams(user=author, post=post["id"])
     connection.execute(insert)
 
 
