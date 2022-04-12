@@ -17,10 +17,9 @@ def test_making_new_post():
         request = _new_post_request()
 
         post_id = catalog.make_post(author, request)
-        stmt = sqlalchemy.select(posts.table).where(posts.table.c.id == post_id)
-        result = connection.execute(stmt)
+        post = _select_post(connection, post_id)
 
-        _assert_post_saved(post_id, author, request, result)
+        _assert_post_saved(post_id, author, request, post)
 
 
 class TestGetPost:
@@ -89,6 +88,15 @@ def _new_post(author: str | None = None) -> dict:
     }
 
 
+def _select_post(connection: base.Connection, post_id: posts.ID) -> dict | None:
+    text = "SELECT id, author, title, description FROM posts WHERE posts.id == :post_id"
+    select = sqlalchemy.text(text).bindparams(post_id=post_id)
+    result = connection.execute(select).fetchone()
+    if not result:
+        return None
+    return dict(result)
+
+
 def _insert_post(connection: base.Connection, post: dict):
     text = "INSERT INTO posts (id, author, title, description) VALUES (:id, :author, :title, :description)"
     values = dict(id=post["id"], author=post["author"], title=post["title"], description=post["description"])
@@ -102,8 +110,9 @@ def _like_post(connection: base.Connection, post: dict, author: str):
     connection.execute(insert)
 
 
-def _assert_post_saved(post_id: posts.ID, author: str, request: posts.MakePostRequest, result):
-    assert (post_id, author, request.title, request.description) == result.fetchone()
+def _assert_post_saved(post_id: posts.ID, author: str, request: posts.MakePostRequest, want: dict | None):
+    assert want is not None
+    assert {"id": post_id, "author": author, "title": request.title, "description": request.description} == want
 
 
 def _assert_post(post: dict, want: dict):
