@@ -1,4 +1,5 @@
 import faker
+import pytest
 import sqlalchemy
 from sqlalchemy.engine import base
 
@@ -68,6 +69,63 @@ class TestHasLike:
             assert result is False, "Post has a like from user"
 
 
+class TestLike:
+    def test_creates_like(self):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            username = _random_user()
+            post = _new_post()
+            _insert_post(connection, post)
+
+            catalog.like(post["id"], username)
+
+            _assert_liked(connection, post["id"], username)
+
+    def test_with_non_existent_post(self):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            username = _random_user()
+            post = _new_post()
+
+            with pytest.raises(posts.NotFound):
+                catalog.like(post["id"], username)
+
+    def test_with_existing_like(self):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            username = _random_user()
+            post = _new_post()
+            _insert_post(connection, post)
+            _like_post(connection, post, username)
+
+            with pytest.raises(posts.AlreadyLiked):
+                catalog.like(post["id"], username)
+
+    def test_with_user_liked_another_post(self):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            username = _random_user()
+            liked_post = _new_post()
+            _insert_post(connection, liked_post)
+            _like_post(connection, liked_post, username)
+            post = _new_post()
+            _insert_post(connection, post)
+
+            catalog.like(post["id"], username)
+
+            _assert_liked(connection, post["id"], username)
+
+    def test_with_author(self):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            username = _random_user()
+            post = _new_post(username)
+            _insert_post(connection, post)
+
+            with pytest.raises(posts.AuthorLiked):
+                catalog.like(post["id"], username)
+
+
 def _random_user() -> str:
     return fake.pystr()
 
@@ -82,7 +140,7 @@ def _new_post(author: str | None = None) -> dict:
 
     return {
         "id": fake.pyint(min_value=1),
-        "author": _random_user(),
+        "author": author,
         "title": fake.pystr(),
         "description": fake.pystr(),
     }
@@ -117,3 +175,9 @@ def _assert_post_saved(post_id: posts.ID, author: str, request: posts.MakePostRe
 
 def _assert_post(post: dict, want: dict):
     assert post == want, "Received wrong post"
+
+
+def _assert_liked(connection: base.Connection, post_id: posts.ID, username: str):
+    text = "SELECT 1 FROM likes WHERE likes.post == :post_id AND likes.user == :username"
+    select = sqlalchemy.text(text).bindparams(post_id=post_id, username=username)
+    assert bool(connection.execute(select).fetchone()) is True, "Post does not have like from user"

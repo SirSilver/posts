@@ -5,6 +5,7 @@ from typing import Optional
 
 import pydantic
 import sqlalchemy as sa
+from sqlalchemy import exc
 from sqlalchemy.engine import base
 
 
@@ -31,6 +32,7 @@ likes_table = sa.Table(
     metadata,
     sa.Column("user", None, sa.ForeignKey("users.username")),
     sa.Column("post", None, sa.ForeignKey("posts.id")),
+    sa.UniqueConstraint("user", "post"),
 )
 
 
@@ -38,8 +40,16 @@ class AlreadyLiked(Exception):
     """User already liked the post."""
 
 
+class AuthorLiked(Exception):
+    """User already liked the post."""
+
+
 class NotLiked(Exception):
     """User did not liked the post."""
+
+
+class NotFound(Exception):
+    """Post not found in catalog."""
 
 
 class MakePostRequest(pydantic.BaseModel):
@@ -103,8 +113,25 @@ class Catalog:
         Args:
             post_id: unique ID to look for.
             username: checking user.
+        Raises:
+            NotFound: post not found in catalog.
+            AuthorLiked: author attempted to like the post.
+            AlreadyLiked: user attempted to like the post he already liked.
         """
-        ...
+        post = self.get(post_id)
+
+        if post is None:
+            raise NotFound
+
+        if post["author"] == username:
+            raise AuthorLiked
+
+        insert = likes_table.insert().values(post=post_id, user=username)
+
+        try:
+            self._connection.execute(insert)
+        except exc.IntegrityError:
+            raise AlreadyLiked
 
     def unlike(self, post_id: ID, username):
         """Unlike post.
