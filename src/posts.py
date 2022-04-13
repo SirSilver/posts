@@ -140,4 +140,8 @@ class Catalog:
             post_id: unique ID to look for.
             username: user has liked post before.
         """
-        ...
+        if not self.has_like(post_id, username):
+            raise NotLiked
+
+        delete = likes_table.delete().where(likes_table.c.post == post_id and likes_table.c.user == username)
+        self._connection.execute(delete)

@@ -126,6 +126,30 @@ class TestLike:
                 catalog.like(post["id"], username)
 
 
+class TestUnlike:
+    def test_deletes_like(self):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            username = _random_user()
+            post = _new_post()
+            _insert_post(connection, post)
+            _like_post(connection, post, username)
+
+            catalog.unlike(post["id"], username)
+
+            _assert_unliked(connection, post["id"], username)
+
+    def test_with_unliked_post(self):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            username = _random_user()
+            post = _new_post()
+            _insert_post(connection, post)
+
+            with pytest.raises(posts.NotLiked):
+                catalog.unlike(post["id"], username)
+
+
 def _random_user() -> str:
     return fake.pystr()
 
@@ -181,3 +205,9 @@ def _assert_liked(connection: base.Connection, post_id: posts.ID, username: str)
     text = "SELECT 1 FROM likes WHERE likes.post == :post_id AND likes.user == :username"
     select = sqlalchemy.text(text).bindparams(post_id=post_id, username=username)
     assert bool(connection.execute(select).fetchone()) is True, "Post does not have like from user"
+
+
+def _assert_unliked(connection: base.Connection, post_id: posts.ID, username: str):
+    text = "SELECT 1 FROM likes WHERE likes.post == :post_id AND likes.user == :username"
+    select = sqlalchemy.text(text).bindparams(post_id=post_id, username=username)
+    assert bool(connection.execute(select).fetchone()) is False, "Post still has a like from user"
