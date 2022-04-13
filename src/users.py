@@ -6,6 +6,7 @@ import hashlib
 import os
 
 from jose import jwt
+import sqlalchemy as sa
 from sqlalchemy.engine import base
 
 import tables
@@ -49,7 +50,8 @@ class Registry:
         Returns:
             Access auth JWT token.
         """
-        select = tables.users.select().where(tables.users.c.username == username)
+        columns = (tables.users.c.username, tables.users.c.password, tables.users.c.salt)
+        select = sa.select(*columns).where(tables.users.c.username == username)
         result = self._connection.execute(select).fetchone()
 
         if not result:
@@ -96,7 +98,9 @@ class Registry:
         Args:
             username: user login identificator.
         """
-        ...
+        now = datetime.datetime.utcnow()
+        insert = tables.users.update().where(tables.users.c.username == username).values(last_activity=now)
+        self._connection.execute(insert)
 
 
 def _hash_password(password: str, salt: bytes) -> bytes:

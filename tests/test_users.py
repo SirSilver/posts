@@ -111,6 +111,18 @@ class TestAuthenticate:
                 registry.authenticate(token)
 
 
+class TestTrackActivity:
+    def test_records_activity_time(self):
+        with engine.begin() as connection:
+            registry = users.Registry(connection)
+            username, password = fake.pystr(), fake.pystr()
+            _insert_user(connection, username, password)
+
+            registry.track_activity(username)
+
+            _assert_tracked(connection, username)
+
+
 def _insert_user(connection: base.Connection, username: str, password: str):
     salt = os.urandom(32)
     password_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000, 128)
@@ -150,3 +162,13 @@ def _assert_token(token: str, username: str):
     want_expire = (now + delta).replace(microsecond=0)
 
     assert have_expire == want_expire, "Token has wrong expire time"
+
+
+def _assert_tracked(connection: base.Connection, username: str):
+    text = "SELECT last_activity FROM users WHERE users.username == :username"
+    select = sqlalchemy.text(text).bindparams(username=username)
+    result = connection.execute(select).fetchone()
+
+    assert result is not None, "Activity has not been tracked"
+    have = datetime.datetime.fromisoformat(result.last_activity).replace(microsecond=0)
+    assert have == datetime.datetime.utcnow().replace(microsecond=0), "Wrong datetime tracked"
