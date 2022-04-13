@@ -1,11 +1,23 @@
 """Users module."""
 
 
+import datetime
 import hashlib
 import os
+
+from jose import jwt
 from sqlalchemy.engine import base
 
 import tables
+
+
+SECRET_KEY = os.getenv("SECRET_KEY", "b95b59f177585138466f60dcade5c26b1710b3714ce1c9d1613af584c4591b8a")
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_LIFETIME = 2 * 60
+
+
+class Unauthorized(Exception):
+    """User is unauthorized."""
 
 
 class Registry:
@@ -24,7 +36,7 @@ class Registry:
             password: user auth password.
         """
         salt = os.urandom(32)
-        password_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100000, 128)
+        password_hash = _hash_password(password, salt)
         insert = tables.users.insert().values(username=username, password=password_hash, salt=salt)
         self._connection.execute(insert)
 
@@ -35,9 +47,22 @@ class Registry:
             username: user login identificator.
             password: user password to match with the one in registry.
         Returns:
-            Access auth token.
+            Access auth JWT token.
         """
-        ...
+        select = tables.users.select().where(tables.users.c.username == username)
+        result = self._connection.execute(select).fetchone()
+
+        if not result:
+            raise Unauthorized
+
+        username, password_hash, salt = result
+
+        if password_hash != _hash_password(password, salt):
+            raise Unauthorized
+
+        expires = datetime.datetime.utcnow() + datetime.timedelta(minutes=ACCESS_TOKEN_LIFETIME)
+
+        return jwt.encode({"sub": username, "exp": expires}, SECRET_KEY, JWT_ALGORITHM)
 
     def authenticate(self, token: str) -> str:
         """Authenticate user with a token.
@@ -47,7 +72,23 @@ class Registry:
         Returns:
             Aunthenticated user name.
         """
-        ...
+        try:
+            payload = jwt.decode(token, SECRET_KEY, JWT_ALGORITHM)
+        except jwt.JWTError:
+            raise Unauthorized
+
+        try:
+            username = payload["sub"]
+        except KeyError:
+            raise Unauthorized
+
+        select = tables.users.select().where(tables.users.c.username == username)
+        result = self._connection.execute(select).fetchone()
+
+        if not result:
+            raise Unauthorized
+
+        return username
 
     def track_activity(self, username: str):
         """Track user activity.
@@ -56,3 +97,7 @@ class Registry:
             username: user login identificator.
         """
         ...
+
+
+def _hash_password(password: str, salt: bytes) -> bytes:
+    return hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100000, 128)
