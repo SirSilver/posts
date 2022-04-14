@@ -8,32 +8,10 @@ import sqlalchemy as sa
 from sqlalchemy import exc
 from sqlalchemy.engine import base
 
+import tables
+
 
 ID = int
-
-
-metadata = sa.MetaData()
-users_table = sa.Table(
-    "users",
-    metadata,
-    sa.Column("username", sa.String, primary_key=True),
-    sa.Column("password", sa.String, nullable=False),
-)
-table = sa.Table(
-    "posts",
-    metadata,
-    sa.Column("id", sa.Integer, primary_key=True),
-    sa.Column("author", None, sa.ForeignKey("users.username")),
-    sa.Column("title", sa.String, nullable=False),
-    sa.Column("description", sa.String, nullable=False),
-)
-likes_table = sa.Table(
-    "likes",
-    metadata,
-    sa.Column("user", None, sa.ForeignKey("users.username")),
-    sa.Column("post", None, sa.ForeignKey("posts.id")),
-    sa.UniqueConstraint("user", "post"),
-)
 
 
 class AlreadyLiked(Exception):
@@ -74,7 +52,7 @@ class Catalog:
         Returns:
             New post ID.
         """
-        stmt = table.insert().values(author=author, title=req.title, description=req.description)
+        stmt = sa.insert(tables.posts).values(author=author, title=req.title, description=req.description)
         result = self._connection.execute(stmt)
         return result.inserted_primary_key.id
 
@@ -86,7 +64,7 @@ class Catalog:
         Returns:
             Saved post in catalog if found.
         """
-        select = table.select().where(table.c.id == post_id)
+        select = sa.select(tables.posts).where(tables.posts.c.id == post_id)
         result = self._connection.execute(select).fetchone()
 
         if not result:
@@ -103,7 +81,7 @@ class Catalog:
         Returns:
             Whether the user has liked the post.
         """
-        select = likes_table.select().where(likes_table.c.post == post_id and likes_table.c.user == username)
+        select = sa.select(tables.likes).where(tables.likes.c.post == post_id and tables.likes.c.user == username)
         result = self._connection.execute(select)
         return bool(result.fetchone())
 
@@ -126,7 +104,7 @@ class Catalog:
         if post["author"] == username:
             raise AuthorLiked
 
-        insert = likes_table.insert().values(post=post_id, user=username)
+        insert = sa.insert(tables.likes).values(post=post_id, user=username)
 
         try:
             self._connection.execute(insert)
@@ -143,5 +121,5 @@ class Catalog:
         if not self.has_like(post_id, username):
             raise NotLiked
 
-        delete = likes_table.delete().where(likes_table.c.post == post_id and likes_table.c.user == username)
+        delete = sa.delete(tables.likes).where(tables.likes.c.post == post_id and tables.likes.c.user == username)
         self._connection.execute(delete)

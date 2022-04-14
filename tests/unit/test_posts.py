@@ -4,11 +4,12 @@ import sqlalchemy
 from sqlalchemy.engine import base
 
 import posts
+import tables
 
 
 fake = faker.Faker()
 engine = sqlalchemy.create_engine("sqlite+pysqlite:///:memory:", future=True)
-posts.metadata.create_all(engine)
+tables.metadata.create_all(engine)
 
 
 def test_making_new_post():
