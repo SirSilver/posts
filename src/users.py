@@ -112,7 +112,13 @@ class Registry:
         Returns:
             Last login and last activity datetime.
         """
-        ...
+        select = sa.select(tables.users.c.last_login, tables.users.c.last_activity).where(
+            tables.users.c.username == username
+        )
+        result = self._connection.execute(select).fetchone()
+        assert result is not None
+
+        return result.last_login, result.last_activity
 
 
 def _hash_password(password: str, salt: bytes) -> bytes:

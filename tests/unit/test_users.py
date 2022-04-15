@@ -124,12 +124,33 @@ class TestTrackActivity:
             _assert_tracked(connection, username)
 
 
+class TestGetActivities:
+    def test_returns_last_login_and_last_activity(self):
+        with engine.begin() as connection:
+            registry = users.Registry(connection)
+            username, password = fake.pystr(), fake.pystr()
+            last_login, last_activity = fake.date_time(), fake.date_time()
+            _insert_user(connection, username, password)
+            _update_tracks(connection, username, last_login, last_activity)
+
+            login, activity = registry.get_activities(username)
+
+            assert login == last_login, "Wrong last login returned"
+            assert activity == last_activity, "Wrong last activity returned"
+
+
 def _insert_user(connection: base.Connection, username: str, password: str):
     salt = os.urandom(32)
     password_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000, 128)
     text = "INSERT INTO users (username, password, salt) VALUES (:username, :password, :salt)"
     insert = sqlalchemy.text(text).bindparams(username=username, password=password_hash, salt=salt)
     connection.execute(insert)
+
+
+def _update_tracks(connection: base.Connection, username: str, last_login: datetime.datetime, last_activity: datetime.datetime):
+    text = "UPDATE users SET last_login = :last_login, last_activity = :last_activity WHERE users.username = :username"
+    update = sqlalchemy.text(text).bindparams(last_login=last_login, last_activity=last_activity, username=username)
+    connection.execute(update)
 
 
 def _encode_token(username: str, expires: Optional[datetime.datetime] = None):
