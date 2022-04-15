@@ -1,4 +1,5 @@
 from __future__ import annotations
+import datetime
 
 from typing import TYPE_CHECKING
 
@@ -214,6 +215,20 @@ class TestDELETELikes:
         _assert_activity_tracked(registry, username)
 
 
+class TestGETAnalytics:
+    async def test_retrieving_analytics(self, client: httpx.AsyncClient, catalog: StubPostsCatalog):
+        count = fake.pyint(min_value=1)
+        catalog.count = count
+        start = fake.date_object()
+        end = fake.date_object()
+
+        resp = await _get_analytics(client, start, end)
+
+        _assert_code(resp, httpx.codes.OK)
+        _assert_body(resp, {"likes": count})
+        _assert_analytics(catalog, start, end)
+
+
 def _random_signup_request() -> dict:
     return {"username": fake.pystr(), "password": fake.pystr()}
 
@@ -269,6 +284,12 @@ async def _unlike_post(client: httpx.AsyncClient, post_id: posts.ID) -> httpx.Re
     return await client.delete(f"/posts/{post_id}/like")
 
 
+async def _get_analytics(
+    client: httpx.AsyncClient, start: datetime.date | None, end: datetime.date | None
+) -> httpx.Response:
+    return await client.get("/analytics", params={"date_from": start, "date_to": end})
+
+
 def _assert_code(resp: httpx.Response, want: int):
     have = resp.status_code
     assert have == want, f"Invalid status code received\nhave {have}\nwant {want}"
@@ -315,3 +336,9 @@ def _assert_unliked(catalog: StubPostsCatalog, post_id: posts.ID, username: str)
 def _assert_activity_tracked(registry: StubUsersRegistry, username: str):
     assert len(registry.track_calls) == 1, f"Have {len(registry.track_calls)} calls to track user, want 1"
     assert registry.track_calls[0] == username, f"Have {registry.track_calls[0]} args to track call, want {username}"
+
+
+def _assert_analytics(catalog: StubPostsCatalog, start: datetime.date | None, end: datetime.date | None):
+    assert len(catalog.analytics_calls) == 1, f"Have {len(catalog.analytics_calls)} calls to analytics, want 1"
+    err = f"Have {catalog.analytics_calls!r} args to analytics call, want ({start!r}, {end!r})"
+    assert catalog.analytics_calls[0] == (start, end), err

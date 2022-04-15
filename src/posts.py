@@ -1,6 +1,7 @@
 """Posts module."""
 
 
+import datetime
 from typing import Optional
 
 import pydantic
@@ -123,3 +124,14 @@ class Catalog:
 
         delete = sa.delete(tables.likes).where(tables.likes.c.post == post_id and tables.likes.c.user == username)
         self._connection.execute(delete)
+
+    def analytics(self, start: datetime.date | None = None, end: datetime.date | None = None) -> int:
+        """Get aggregated likes count.
+
+        Args:
+            start: start date of aggregating.
+            end: end date of aggregating.
+        Returns:
+            Number of likes made in given period.
+        """
+        ...

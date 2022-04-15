@@ -3,6 +3,7 @@
 
 import collections
 import dataclasses
+import datetime
 import functools
 from typing import Optional
 
@@ -105,8 +106,12 @@ class StubPostsCatalog:
     post_calls: list[tuple[str, dict]] = dataclasses.field(default_factory=list)
     like_calls: list[tuple[posts.ID, str]] = dataclasses.field(default_factory=list)
     unlike_calls: list[tuple[posts.ID, str]] = dataclasses.field(default_factory=list)
+    analytics_calls: list[tuple[datetime.date | None, datetime.date | None]] = dataclasses.field(default_factory=list)
+    count: int = dataclasses.field(default=0)
     _posts: dict[posts.ID, dict] = dataclasses.field(default_factory=dict)
-    _likes: dict[posts.ID, list[str]] = dataclasses.field(default_factory=functools.partial(collections.defaultdict, list))
+    _likes: dict[posts.ID, list[str]] = dataclasses.field(
+        default_factory=functools.partial(collections.defaultdict, list)
+    )
 
     def make_post(self, author: str, req: posts.MakePostRequest) -> posts.ID:
         """Make a new post.
@@ -188,6 +193,18 @@ class StubPostsCatalog:
             raise posts.NotLiked
 
         self.unlike_calls.append((post_id, username))
+
+    def analytics(self, start: datetime.date | None = None, end: datetime.date | None = None) -> int:
+        """Get aggregated likes count.
+
+        Args:
+            start: start date of aggregating.
+            end: end date of aggregating.
+        Returns:
+            Number of likes made in given period.
+        """
+        self.analytics_calls.append((start, end))
+        return self.count
 
 
 @pytest.fixture()
