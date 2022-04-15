@@ -228,6 +228,18 @@ class TestGETAnalytics:
         _assert_body(resp, {"likes": count})
         _assert_analytics(catalog, start, end)
 
+    async def test_without_dates(self, client: httpx.AsyncClient, catalog: StubPostsCatalog):
+        count = fake.pyint(min_value=1)
+        catalog.count = count
+        start = None
+        end = None
+
+        resp = await _get_analytics(client, start, end)
+
+        _assert_code(resp, httpx.codes.OK)
+        _assert_body(resp, {"likes": count})
+        _assert_analytics(catalog, start, end)
+
 
 def _random_signup_request() -> dict:
     return {"username": fake.pystr(), "password": fake.pystr()}
@@ -287,7 +299,15 @@ async def _unlike_post(client: httpx.AsyncClient, post_id: posts.ID) -> httpx.Re
 async def _get_analytics(
     client: httpx.AsyncClient, start: datetime.date | None, end: datetime.date | None
 ) -> httpx.Response:
-    return await client.get("/analytics", params={"date_from": start, "date_to": end})
+    params = {}
+
+    if start is not None:
+        params.update(date_from=start)
+
+    if end is not None:
+        params.update(date_to=end)
+
+    return await client.get("/analytics", params=params)
 
 
 def _assert_code(resp: httpx.Response, want: int):

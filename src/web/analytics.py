@@ -13,8 +13,8 @@ router = fastapi.APIRouter(prefix="/analytics", tags=["analytics"])
 
 @router.get("")
 def get_analytics(
-    date_from: datetime.date | None,
-    date_to: datetime.date | None,
+    date_from: datetime.date | None = fastapi.Query(None),
+    date_to: datetime.date | None = fastapi.Query(None),
     catalog: posts.Catalog = fastapi.Depends(web_posts.catalog),
 ):
     return {"likes": catalog.analytics(date_from, date_to)}
