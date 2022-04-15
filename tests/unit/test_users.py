@@ -39,6 +39,7 @@ class TestLogin:
             token = registry.login(username, password)
 
             _assert_token(token, username)
+            _assert_login_tracked(connection, username)
 
     def test_with_wrong_password(self):
         with engine.begin() as connection:
@@ -162,6 +163,17 @@ def _assert_token(token: str, username: str):
     want_expire = (now + delta).replace(microsecond=0)
 
     assert have_expire == want_expire, "Token has wrong expire time"
+
+
+def _assert_login_tracked(connection: base.Connection, username: str):
+    text = "SELECT last_login FROM users WHERE users.username == :username"
+    select = sqlalchemy.text(text).bindparams(username=username)
+    result = connection.execute(select).fetchone()
+
+    assert result is not None
+    assert result.last_login is not None
+    have = datetime.datetime.fromisoformat(result.last_login).replace(microsecond=0)
+    assert have == datetime.datetime.utcnow().replace(microsecond=0), "Wrong datetime tracked"
 
 
 def _assert_tracked(connection: base.Connection, username: str):

@@ -63,6 +63,8 @@ class Registry:
             raise Unauthorized
 
         expires = datetime.datetime.utcnow() + datetime.timedelta(minutes=ACCESS_TOKEN_LIFETIME)
+        update = sa.update(tables.users).where(tables.users.c.username == username).values(last_login=sa.func.now())
+        self._connection.execute(update)
 
         return jwt.encode({"sub": username, "exp": expires}, SECRET_KEY, JWT_ALGORITHM)
 

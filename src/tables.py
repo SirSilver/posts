@@ -8,6 +8,7 @@ users = sa.Table(
     sa.Column("username", sa.String, primary_key=True),
     sa.Column("password", sa.String, nullable=False),
     sa.Column("salt", sa.String, nullable=False),
+    sa.Column("last_login", sa.DateTime),
     sa.Column("last_activity", sa.DateTime),
 )
 posts = sa.Table(
