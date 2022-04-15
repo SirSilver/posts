@@ -31,7 +31,9 @@ def current_user(
     if not token:
         raise fastapi.HTTPException(fastapi.status.HTTP_401_UNAUTHORIZED)
 
-    if (username := registry.authenticate(token)) is None:
+    try:
+        username = registry.authenticate(token)
+    except users.Unauthorized:
         raise fastapi.HTTPException(fastapi.status.HTTP_403_FORBIDDEN)
 
     return username
