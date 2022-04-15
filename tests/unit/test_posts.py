@@ -1,18 +1,16 @@
+import datetime
 import faker
 import pytest
 import sqlalchemy
 from sqlalchemy.engine import base
 
 import posts
-import tables
 
 
 fake = faker.Faker()
-engine = sqlalchemy.create_engine("sqlite+pysqlite:///:memory:", future=True)
-tables.metadata.create_all(engine)
 
 
-def test_making_new_post():
+def test_making_new_post(engine: sqlalchemy.engine.Engine):
     with engine.begin() as connection:
         catalog = posts.Catalog(connection)
         author = _random_user()
@@ -25,7 +23,7 @@ def test_making_new_post():
 
 
 class TestGetPost:
-    def test_retrieving_post(self):
+    def test_retrieving_post(self, engine: sqlalchemy.engine.Engine):
         with engine.begin() as connection:
             catalog = posts.Catalog(connection)
             post = _new_post()
@@ -36,7 +34,7 @@ class TestGetPost:
             assert result is not None
             _assert_post(post, result)
 
-    def test_with_non_existent_post(self):
+    def test_with_non_existent_post(self, engine: sqlalchemy.engine.Engine):
         with engine.begin() as connection:
             catalog = posts.Catalog(connection)
 
@@ -46,7 +44,7 @@ class TestGetPost:
 
 
 class TestHasLike:
-    def test_with_existing_like(self):
+    def test_with_existing_like(self, engine: sqlalchemy.engine.Engine):
         with engine.begin() as connection:
             catalog = posts.Catalog(connection)
             username = _random_user()
@@ -58,7 +56,7 @@ class TestHasLike:
 
             assert result is True
 
-    def test_with_non_existing_like(self):
+    def test_with_non_existing_like(self, engine: sqlalchemy.engine.Engine):
         with engine.begin() as connection:
             catalog = posts.Catalog(connection)
             username = _random_user()
@@ -71,7 +69,7 @@ class TestHasLike:
 
 
 class TestLike:
-    def test_creates_like(self):
+    def test_creates_like(self, engine: sqlalchemy.engine.Engine):
         with engine.begin() as connection:
             catalog = posts.Catalog(connection)
             username = _random_user()
@@ -82,7 +80,7 @@ class TestLike:
 
             _assert_liked(connection, post["id"], username)
 
-    def test_with_non_existent_post(self):
+    def test_with_non_existent_post(self, engine: sqlalchemy.engine.Engine):
         with engine.begin() as connection:
             catalog = posts.Catalog(connection)
             username = _random_user()
@@ -91,7 +89,7 @@ class TestLike:
             with pytest.raises(posts.NotFound):
                 catalog.like(post["id"], username)
 
-    def test_with_existing_like(self):
+    def test_with_existing_like(self, engine: sqlalchemy.engine.Engine):
         with engine.begin() as connection:
             catalog = posts.Catalog(connection)
             username = _random_user()
@@ -102,7 +100,7 @@ class TestLike:
             with pytest.raises(posts.AlreadyLiked):
                 catalog.like(post["id"], username)
 
-    def test_with_user_liked_another_post(self):
+    def test_with_user_liked_another_post(self, engine: sqlalchemy.engine.Engine):
         with engine.begin() as connection:
             catalog = posts.Catalog(connection)
             username = _random_user()
@@ -116,7 +114,7 @@ class TestLike:
 
             _assert_liked(connection, post["id"], username)
 
-    def test_with_author(self):
+    def test_with_author(self, engine: sqlalchemy.engine.Engine):
         with engine.begin() as connection:
             catalog = posts.Catalog(connection)
             username = _random_user()
@@ -128,7 +126,7 @@ class TestLike:
 
 
 class TestUnlike:
-    def test_deletes_like(self):
+    def test_deletes_like(self, engine: sqlalchemy.engine.Engine):
         with engine.begin() as connection:
             catalog = posts.Catalog(connection)
             username = _random_user()
@@ -140,7 +138,7 @@ class TestUnlike:
 
             _assert_unliked(connection, post["id"], username)
 
-    def test_with_unliked_post(self):
+    def test_with_unliked_post(self, engine: sqlalchemy.engine.Engine):
         with engine.begin() as connection:
             catalog = posts.Catalog(connection)
             username = _random_user()
@@ -149,6 +147,79 @@ class TestUnlike:
 
             with pytest.raises(posts.NotLiked):
                 catalog.unlike(post["id"], username)
+
+
+class TestAnalytics:
+    def test_aggregates_likes(self, engine: sqlalchemy.engine.Engine):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            post = _new_post()
+            _insert_post(connection, post)
+            count = fake.pyint(min_value=1, max_value=10)
+
+            for _ in range(count):
+                _like_post(connection, post, _random_user())
+
+            likes = catalog.analytics()
+
+            assert likes == count, "Likes were aggregated wrong"
+
+    def test_with_date_range(self, engine: sqlalchemy.engine.Engine):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            post = _new_post()
+            _insert_post(connection, post)
+            count = fake.pyint(min_value=1, max_value=10)
+            date_to = fake.date_object()
+            date_from = fake.date_object(date_to)
+
+            for _ in range(count):
+                _like_post_date(connection, post, _random_user(), fake.date_between(date_from, date_to))
+
+            for _ in range(fake.pyint(min_value=1, max_value=10)):
+                _like_post_date(connection, post, _random_user(), fake.date_object(date_from))
+
+            likes = catalog.analytics(date_from, date_to)
+
+            assert likes == count, "Likes were aggregated wrong"
+
+    def test_with_null_date_from(self, engine: sqlalchemy.engine.Engine):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            post = _new_post()
+            _insert_post(connection, post)
+            count = fake.pyint(min_value=1, max_value=10)
+            date_from = fake.past_date()
+            date_to = fake.past_date(date_from)
+
+            for _ in range(count):
+                _like_post_date(connection, post, _random_user(), fake.date_between(date_from, date_to))
+
+            for _ in range(count):
+                _like_post_date(connection, post, _random_user(), fake.future_date())
+
+            likes = catalog.analytics(None, date_to)
+
+            assert likes == count, "Likes were aggregated wrong"
+
+    def test_with_null_date_to(self, engine: sqlalchemy.engine.Engine):
+        with engine.begin() as connection:
+            catalog = posts.Catalog(connection)
+            post = _new_post()
+            _insert_post(connection, post)
+            count = fake.pyint(min_value=1, max_value=10)
+            date_from = fake.past_date()
+            date_to = fake.past_date(date_from)
+
+            for _ in range(count):
+                _like_post_date(connection, post, _random_user(), fake.date_between(date_from, date_to))
+
+            for _ in range(count):
+                _like_post_date(connection, post, _random_user(), fake.future_date())
+
+            likes = catalog.analytics(date_from, None)
+
+            assert likes == 2 * count, "Likes were aggregated wrong"
 
 
 def _random_user() -> str:
@@ -190,6 +261,12 @@ def _insert_post(connection: base.Connection, post: dict):
 def _like_post(connection: base.Connection, post: dict, author: str):
     text = "INSERT INTO likes (user, post) VALUES (:user, :post)"
     insert = sqlalchemy.text(text).bindparams(user=author, post=post["id"])
+    connection.execute(insert)
+
+
+def _like_post_date(connection: base.Connection, post: dict, author: str, date: datetime.date):
+    text = "INSERT INTO likes (user, post, date) VALUES (:user, :post, :date)"
+    insert = sqlalchemy.text(text).bindparams(user=author, post=post["id"], date=date)
     connection.execute(insert)
 
 

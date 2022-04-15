@@ -134,4 +134,14 @@ class Catalog:
         Returns:
             Number of likes made in given period.
         """
-        ...
+        filters = []
+        date_col = tables.likes.c.date
+
+        if start is not None:
+            filters.append(start <= date_col)
+
+        if end is not None:
+            filters.append(date_col <= end)
+
+        select = sa.select(sa.func.count()).select_from(tables.likes).where(*filters)
+        return self._connection.execute(select).scalar()

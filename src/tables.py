@@ -23,5 +23,6 @@ likes = sa.Table(
     metadata,
     sa.Column("user", None, sa.ForeignKey("users.username")),
     sa.Column("post", None, sa.ForeignKey("posts.id")),
+    sa.Column("date", sa.Date, server_default=sa.func.now()),
     sa.UniqueConstraint("user", "post"),
 )
