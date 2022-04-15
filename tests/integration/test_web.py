@@ -48,7 +48,7 @@ async def _signup(client: httpx.AsyncClient, user: dict) -> httpx.Response:
 
 
 async def _login(client: httpx.AsyncClient, user: dict) -> httpx.Response:
-    return await client.post("/users/login", json=user)
+    return await client.post("/users/login", data=user)
 
 
 async def _make_post(client: httpx.AsyncClient, post: dict) -> httpx.Response:

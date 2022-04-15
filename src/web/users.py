@@ -65,9 +65,15 @@ def signup(req: SignupRequest, registry: users.Registry = fastapi.Depends(regist
 
 
 @router.post("/login")
-def login(req: SignupRequest, registry: users.Registry = fastapi.Depends(registry)):
-    response = {"token": registry.login(req.username, req.password)}
-    registry.track_activity(req.username)
+def login(
+    form_data: security.OAuth2PasswordRequestForm = fastapi.Depends(),
+    registry: users.Registry = fastapi.Depends(registry),
+):
+    try:
+        response = {"token": registry.login(form_data.username, form_data.password)}
+    except users.Unauthorized:
+        raise fastapi.HTTPException(fastapi.status.HTTP_401_UNAUTHORIZED)
+    registry.track_activity(form_data.username)
     return response
 
 

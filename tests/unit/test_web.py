@@ -40,6 +40,15 @@ class TestPOSTLogin:
         _assert_body(resp, {"token": token})
         _assert_activity_tracked(registry, user["username"])
 
+    async def test_with_wrong_token(self, client: httpx.AsyncClient, registry: StubUsersRegistry):
+        user = _random_user()
+        client.headers["Authorization"] = f"Bearer {fake.pystr()}"
+        request = _new_login_request(user)
+
+        resp = await _login(client, request)
+
+        _assert_code(resp, httpx.codes.UNAUTHORIZED)
+
 
 class TestGETUserActivity:
     async def test_retrieving_user_activity(self, client: httpx.AsyncClient, registry: StubUsersRegistry):
@@ -298,7 +307,7 @@ async def _signup(client: httpx.AsyncClient, request: dict) -> httpx.Response:
 
 
 async def _login(client: httpx.AsyncClient, request: dict) -> httpx.Response:
-    return await client.post("/users/login", json=request)
+    return await client.post("/users/login", data=request)
 
 
 async def _get_activity(client: httpx.AsyncClient) -> httpx.Response:

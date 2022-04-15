@@ -13,6 +13,7 @@ import httpx
 import pytest
 
 import posts
+import users
 import web
 
 
@@ -60,7 +61,10 @@ class StubUsersRegistry:
         Returns:
             Access auth token.
         """
-        return self._users[(username, password)]
+        try:
+            return self._users[(username, password)]
+        except KeyError:
+            raise users.Unauthorized
 
     def add_token(self, token: str) -> str:
         """Add token to registry.
@@ -87,7 +91,7 @@ class StubUsersRegistry:
         try:
             user, _ = next(u for u in self._users if self._users[u] == token)
         except StopIteration:
-            return None
+            raise users.Unauthorized
 
         return user
 
