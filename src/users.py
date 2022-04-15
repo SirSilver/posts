@@ -104,6 +104,16 @@ class Registry:
         insert = tables.users.update().where(tables.users.c.username == username).values(last_activity=now)
         self._connection.execute(insert)
 
+    def get_activities(self, username: str) -> tuple[datetime.datetime, datetime.datetime]:
+        """Get last user actities tracks.
+
+        Args:
+            username: user login identificator.
+        Returns:
+            Last login and last activity datetime.
+        """
+        ...
+
 
 def _hash_password(password: str, salt: bytes) -> bytes:
     return hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100000, 128)

@@ -26,6 +26,7 @@ class StubUsersRegistry:
     signup_calls: list[tuple[str, str]] = dataclasses.field(default_factory=list)
     track_calls: list[str] = dataclasses.field(default_factory=list)
     _users: dict[tuple, str] = dataclasses.field(default_factory=dict)
+    _tracks: dict[str, tuple[datetime.datetime, datetime.datetime]] = dataclasses.field(default_factory=dict)
 
     def signup(self, username: str, password: str):
         """Signup new user.
@@ -97,6 +98,28 @@ class StubUsersRegistry:
             username: user login identificator.
         """
         self.track_calls.append(username)
+
+    def add_tracks(self, username: str, last_login: datetime.datetime, last_activity: datetime.datetime):
+        """Add user activity track.
+
+        This is helper func for tests setup.
+
+        Args:
+            username: user login identificator.
+            last_login: last time user has logged in.
+            last_activity: last time user has requested service.
+        """
+        self._tracks[username] = (last_login, last_activity)
+
+    def get_activities(self, username: str) -> tuple[datetime.datetime, datetime.datetime]:
+        """Get last user actities tracks.
+
+        Args:
+            username: user login identificator.
+        Returns:
+            Last login and last activity datetime.
+        """
+        return self._tracks[username]
 
 
 @dataclasses.dataclass

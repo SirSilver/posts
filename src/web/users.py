@@ -21,19 +21,6 @@ class SignupRequest(pydantic.BaseModel):
     password: str
 
 
-@router.post("", status_code=201)
-def signup(req: SignupRequest, registry: users.Registry = fastapi.Depends(registry)):
-    registry.signup(req.username, req.password)
-    return {"links": [{"rel": "login", "href": "/login", "action": "POST"}]}
-
-
-@router.post("/login")
-def login(req: SignupRequest, registry: users.Registry = fastapi.Depends(registry)):
-    response = {"token": registry.login(req.username, req.password)}
-    registry.track_activity(req.username)
-    return response
-
-
 oauth2_scheme = security.OAuth2PasswordBearer(tokenUrl="/users/login", auto_error=False)
 
 
@@ -69,3 +56,22 @@ async def track_activity(
         return
 
     registry.track_activity(username)
+
+
+@router.post("", status_code=201)
+def signup(req: SignupRequest, registry: users.Registry = fastapi.Depends(registry)):
+    registry.signup(req.username, req.password)
+    return {"links": [{"rel": "login", "href": "/login", "action": "POST"}]}
+
+
+@router.post("/login")
+def login(req: SignupRequest, registry: users.Registry = fastapi.Depends(registry)):
+    response = {"token": registry.login(req.username, req.password)}
+    registry.track_activity(req.username)
+    return response
+
+
+@router.get("/activity")
+def get_activity(username: str = fastapi.Depends(current_user), registry: users.Registry = fastapi.Depends(registry)):
+    last_login, last_activity = registry.get_activities(username)
+    return {"last_login": last_login, "last_activity": last_activity}

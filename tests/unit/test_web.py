@@ -41,6 +41,22 @@ class TestPOSTLogin:
         _assert_activity_tracked(registry, user["username"])
 
 
+class TestGETUserActivity:
+    async def test_retrieving_user_activity(self, client: httpx.AsyncClient, registry: StubUsersRegistry):
+        username = _authorize(client, registry)
+        last_login, last_activity = fake.date_object(), fake.date_object()
+        registry.add_tracks(username, last_login, last_activity)
+
+        resp = await _get_activity(client)
+
+        _assert_body(resp, {"last_login": last_login.isoformat(), "last_activity": last_activity.isoformat()})
+
+    async def test_with_unauth_user(self, client: httpx.AsyncClient):
+        resp = await _get_activity(client)
+
+        _assert_code(resp, httpx.codes.UNAUTHORIZED)
+
+
 class TestPOSTPosts:
     """Test posts resource POST endpoint."""
 
@@ -254,7 +270,12 @@ def _random_post_request() -> dict:
 
 
 def _random_user() -> dict:
-    return {"username": fake.pystr(), "password": fake.pystr()}
+    return {
+        "username": fake.pystr(),
+        "password": fake.pystr(),
+        "last_login": fake.date_object(),
+        "last_activity": fake.date_object(),
+    }
 
 
 def _random_post(author: str | None = None) -> dict:
@@ -278,6 +299,10 @@ async def _signup(client: httpx.AsyncClient, request: dict) -> httpx.Response:
 
 async def _login(client: httpx.AsyncClient, request: dict) -> httpx.Response:
     return await client.post("/users/login", json=request)
+
+
+async def _get_activity(client: httpx.AsyncClient) -> httpx.Response:
+    return await client.get("/users/activity")
 
 
 async def _make_post(client: httpx.AsyncClient, post: dict) -> httpx.Response:
