@@ -72,7 +72,7 @@ def login(
     registry: users.Registry = fastapi.Depends(registry),
 ):
     try:
-        response = {"token": registry.login(form_data.username, form_data.password)}
+        response = {"access_token": registry.login(form_data.username, form_data.password), "token_type": "bearer"}
     except users.Unauthorized:
         raise fastapi.HTTPException(fastapi.status.HTTP_401_UNAUTHORIZED)
     registry.track_activity(form_data.username)

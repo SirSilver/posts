@@ -37,10 +37,10 @@ class TestPOSTLogin:
         resp = await _login(client, request)
 
         _assert_code(resp, httpx.codes.OK)
-        _assert_body(resp, {"token": token})
+        _assert_body(resp, {"access_token": token, "token_type": "bearer"})
         _assert_activity_tracked(registry, user["username"])
 
-    async def test_with_wrong_token(self, client: httpx.AsyncClient, registry: StubUsersRegistry):
+    async def test_with_wrong_token(self, client: httpx.AsyncClient):
         user = _random_user()
         client.headers["Authorization"] = f"Bearer {fake.pystr()}"
         request = _new_login_request(user)

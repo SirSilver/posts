@@ -40,7 +40,7 @@ def _new_post_request() -> dict:
 async def _auth(client: httpx.AsyncClient, user: dict):
     await _signup(client, user)
     resp = await _login(client, user)
-    client.headers["Authorization"] = f"Bearer {resp.json()['token']}"
+    client.headers["Authorization"] = f"Bearer {resp.json()['access_token']}"
 
 
 async def _signup(client: httpx.AsyncClient, user: dict) -> httpx.Response:
