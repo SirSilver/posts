@@ -8,6 +8,9 @@ import tables
 import users
 
 
+USER_EXISTS_ERROR = "User with given username already exists"
+
+
 router = fastapi.APIRouter(prefix="/users", tags=["users"])
 
 
@@ -64,7 +67,10 @@ async def track_activity(
 
 @router.post("", status_code=201)
 def signup(req: SignupRequest, registry: users.Registry = fastapi.Depends(registry)):
-    registry.signup(req.username, req.password)
+    try:
+        registry.signup(req.username, req.password)
+    except users.UserExists:
+        raise fastapi.HTTPException(fastapi.status.HTTP_400_BAD_REQUEST, USER_EXISTS_ERROR)
     return {"links": [{"rel": "login", "href": "/login", "action": "POST"}]}
 
 

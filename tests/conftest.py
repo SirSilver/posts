@@ -36,6 +36,10 @@ class StubUsersRegistry:
             username: user login identificator.
             password: user auth password.
         """
+        for u, _ in self.signup_calls:
+            if u == username:
+                raise users.UserExists
+
         self.signup_calls.append((username, password))
 
     def add_user(self, user: dict) -> str:

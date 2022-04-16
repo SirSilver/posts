@@ -28,6 +28,16 @@ class TestSignup:
 
             _assert_registered(connection, username, password)
 
+    def test_with_existing_username(self):
+        with engine.begin() as connection:
+            registry = users.Registry(connection)
+            username, password = fake.pystr(), fake.pystr()
+
+            registry.signup(username, password)
+
+            with pytest.raises(users.UserExists):
+                registry.signup(username, password)
+
 
 class TestLogin:
     def test_signing_in_user(self):

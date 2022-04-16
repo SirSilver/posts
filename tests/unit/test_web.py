@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 import faker
 import httpx
 
+from web import users
+
 if TYPE_CHECKING:
     from tests.conftest import StubPostsCatalog, StubUsersRegistry
     import posts
@@ -24,6 +26,15 @@ class TestPOSTSignup:
         _assert_code(resp, httpx.codes.CREATED)
         _assert_body(resp, {"links": [{"rel": "login", "href": "/login", "action": "POST"}]})
         _assert_registered(registry, request)
+
+    async def test_with_existing_user(self, client: httpx.AsyncClient, registry: StubUsersRegistry):
+        request = _random_signup_request()
+        registry.signup(request["username"], request["password"])
+
+        resp = await _signup(client, request)
+
+        _assert_code(resp, httpx.codes.BAD_REQUEST)
+        _assert_body(resp, {"detail": users.USER_EXISTS_ERROR})
 
 
 class TestPOSTLogin:

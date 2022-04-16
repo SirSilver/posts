@@ -7,6 +7,7 @@ import os
 
 from jose import jwt
 import sqlalchemy as sa
+from sqlalchemy import exc
 from sqlalchemy.engine import base
 
 import tables
@@ -15,6 +16,10 @@ import tables
 SECRET_KEY = os.getenv("SECRET_KEY", "b95b59f177585138466f60dcade5c26b1710b3714ce1c9d1613af584c4591b8a")
 JWT_ALGORITHM = "HS256"
 ACCESS_TOKEN_LIFETIME = 2 * 60
+
+
+class UserExists(Exception):
+    """User with given username already exists."""
 
 
 class Unauthorized(Exception):
@@ -39,7 +44,10 @@ class Registry:
         salt = os.urandom(32)
         password_hash = _hash_password(password, salt)
         insert = tables.users.insert().values(username=username, password=password_hash, salt=salt)
-        self._connection.execute(insert)
+        try:
+            self._connection.execute(insert)
+        except exc.IntegrityError:
+            raise UserExists
 
     def login(self, username: str, password: str) -> str:
         """Login registered user.
