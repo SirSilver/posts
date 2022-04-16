@@ -1,17 +1,20 @@
 from __future__ import annotations
+from typing import Generator
 
 import fastapi
 from fastapi import security
 import pydantic
 
+import tables
 import users
 
 
 router = fastapi.APIRouter(prefix="/users", tags=["users"])
 
 
-def registry() -> users.Registry:
-    ...
+def registry() -> Generator[users.Registry, None, None]:
+    with tables.engine.begin() as connection:
+        yield users.Registry(connection)
 
 
 class SignupRequest(pydantic.BaseModel):

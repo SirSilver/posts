@@ -1,6 +1,10 @@
 import sqlalchemy as sa
+from sqlalchemy import pool
 
 
+engine = sa.create_engine(
+    "sqlite+pysqlite:///:memory:", future=True, connect_args={"check_same_thread": False}, poolclass=pool.StaticPool
+)
 metadata = sa.MetaData()
 users = sa.Table(
     "users",
@@ -27,3 +31,4 @@ likes = sa.Table(
     sa.Column("date", sa.Date, server_default=sa.func.now()),
     sa.UniqueConstraint("user", "post"),
 )
+metadata.create_all(engine)
