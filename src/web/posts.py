@@ -86,7 +86,7 @@ def like(
     return {"links": [_link("unlike", f"/posts/{post_id}/like", "DELETE")]}
 
 
-@router.delete("/{post_id}/like", status_code=fastapi.status.HTTP_204_NO_CONTENT)
+@router.delete("/{post_id}/like", status_code=fastapi.status.HTTP_200_OK)
 def unlike(
     post_id: posts.ID,
     catalog: posts.Catalog = fastapi.Depends(catalog),

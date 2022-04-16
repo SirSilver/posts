@@ -213,7 +213,7 @@ class TestDELETELikes:
 
         resp = await _unlike_post(client, post["id"])
 
-        _assert_code(resp, httpx.codes.NO_CONTENT)
+        _assert_code(resp, httpx.codes.OK)
         _assert_body(resp, {"links": [{"rel": "like", "href": f"/posts/{post['id']}/like", "action": "POST"}]})
         _assert_unliked(catalog, post["id"], username)
         _assert_activity_tracked(registry, username)
