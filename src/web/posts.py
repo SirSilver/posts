@@ -2,7 +2,6 @@
 
 
 from __future__ import annotations
-from typing import Generator
 
 import fastapi
 import pydantic
@@ -33,9 +32,9 @@ class PostResponse(pydantic.BaseModel):
 router = fastapi.APIRouter(prefix="/posts", tags=["posts"], dependencies=[fastapi.Depends(users.track_activity)])
 
 
-def catalog() -> Generator[posts.Catalog, None, None]:
-    with tables.engine.begin() as connection:
-        yield posts.Catalog(connection)
+async def catalog() -> posts.Catalog:
+    connection = tables.engine.connect()
+    return posts.Catalog(connection)
 
 
 @router.post("", status_code=201)
